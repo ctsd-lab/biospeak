@@ -471,7 +471,7 @@ logarithmic axes; the coordinates are not divided by an operating point or by
 a kinetic constant. The first panel states the required environments and the
 common characterized sensor-admissible domain for all six designs.
 The other panels shade the input satisfaction sets for the ON and OFF contract
-guarantees over the stated parameter ranges. Curved shaded boundaries
+guarantees at the stated design parameter values. Curved shaded boundaries
 come from the full QSS binding relation rather than from artificial rectangular
 design regions.
 """
@@ -648,8 +648,8 @@ required output-flux inequality for that mode. They are sets in different
 spaces, so an assumption is not literally contained in a guarantee. The plot
 instead shades the projected input satisfaction set
 \[
-S_D^q=\{\xi:\ y_D(\xi;\theta)\text{ satisfies }G_q
-\text{ for every allowed }\theta\}.
+S_D^q=\{\xi:\ y_D(\xi;\theta_D)\text{ satisfies }G_q\},
+where $\theta_D$ denotes the fixed parameters of design $D$.
 \]
 A design passes mode $q$ when $A_q\subseteq S_D^q$ (every allowed input in
 that mode produces only outputs satisfying its output requirement). In the
@@ -667,7 +667,7 @@ top row to its mechanism-specific redesign in the bottom row. The outlined ON
 and OFF regions are the same fixed top-level requirement in every panel:
 $y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
 
-Color gives the worst-case lower output flux over the stated parameter ranges.
+Color gives the output flux at the stated design parameter values.
 Green and gray shading mark the ON and OFF contract satisfaction sets. Thick
 white contours show the two top-level contract guarantee boundaries: solid for
 ON and dashed for OFF.
