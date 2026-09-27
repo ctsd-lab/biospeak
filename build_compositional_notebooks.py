@@ -68,14 +68,20 @@ from compositional_regime_contracts import (
     CORES,
     DEFAULT_UNCERTAINTY,
     MARIONETTE_SENSORS,
+    REDESIGNS,
+    REDESIGN_PARAMETERS,
     condition_flux_interval,
     infer_regime,
     make_candidate_designs,
     make_top_level_conditions,
     parameter_range_flux_bounds,
+    redesigned_condition_flux_interval,
+    redesigned_parameter_range_flux_bounds,
     sensor_activity,
     summarize_candidate_envelopes,
+    summarize_redesigned_envelopes,
     verify_condition,
+    verify_redesigned_condition,
 )
 
 pd.set_option("display.max_colwidth", 80)
@@ -296,11 +302,91 @@ pd.DataFrame(interval_rows)
 The broadened LOW range exposes a limitation that the leak-only specification
 hid: none of the three direct complex-formation cores guarantees the complete
 AND behavior. HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF
-ceiling; split T7 RNAP also falls slightly below the ON target. The appropriate
-design response is to retune the branch gains or introduce a steeper integration
-mechanism, then repeat the same contract checks. The equality of each ordered
-pair after the RPU interface still shows what the abstraction provides; their
-required inducer concentrations remain different in the sensor contracts.
+ceiling; split T7 RNAP also falls slightly below the ON target. The equality of
+each ordered pair after the RPU interface still shows what the abstraction
+provides; their required inducer concentrations remain different in the sensor
+contracts.
+
+## Mechanism-specific redesigns from published biology
+
+The fixed top-level specification above is now held unchanged. Each redesign
+changes only a mechanism for which there is a literature basis:
+
+1. **HrpR/HrpS + HrpV inhibition.** Jovanovic *et al.* directly assayed
+   HrpV inhibition of HrpRS, using 0.8 micromolar HrpRS and HrpV doses from
+   0.1 to 0.8 micromolar. The redesigned model therefore adds a constitutive
+   HrpV pool over that experimentally assayed range. In the absence of a
+   reported HrpV--HrpS dissociation constant, the implementation uses a
+   stoichiometric strong-inhibition abstraction: one HrpV unit can neutralize
+   one unit of productive HrpRS complex.
+2. **split T7 RNAP + SYNZIP17/18.** The residue-601 split was fused to
+   SYNZIP17 and SYNZIP18 to promote fragment complementation. The measured
+   SYNZIP17:SYNZIP18 interaction has $K_d<10$ nM, so the redesign replaces
+   the provisional 1200 nM affinity by the full conservative interval
+   $0<K\le 10$ nM. The existing gain and output-rate ranges are left unchanged.
+3. **InvF/SicA + native SicA--SipC titration.** The mechanistic model of
+   Temme *et al.* uses $K_{XY}=1700$ nM for InvF:SicA,
+   $K_{YZ}=28$ nM for SicA:SipC, and approximately 6000--10000 SipC
+   molecules/cell. We use those values directly. SicA first equilibrates with
+   the fixed SipC pool, then free SicA can form the active InvF:SicA complex.
+
+These are forward evaluations of literature-motivated mechanism changes.
+Parameters are not searched or adjusted to force refinement.
+"""
+    ),
+    code(
+        """
+redesign_rows = []
+for core_name, redesign in REDESIGNS.items():
+    params = REDESIGN_PARAMETERS[core_name]
+    redesign_rows.append({
+        "Core": core_name,
+        "Redesign": redesign.label,
+        "Mechanism": redesign.mechanism,
+        "Literature parameters used": str(params),
+        "Source": redesign.source,
+    })
+pd.DataFrame(redesign_rows)
+"""
+    ),
+    code(
+        """
+redesigned_envelope_summary = summarize_redesigned_envelopes(candidates, conditions)
+
+redesigned_verification_rows = []
+redesigned_verification = {}
+for candidate in candidates:
+    condition_results = {}
+    for condition in conditions:
+        result = verify_redesigned_condition(candidate, condition)
+        condition_results[condition.name] = result
+    redesigned_verification[candidate.name] = condition_results
+    redesigned_verification_rows.append({
+        "Design": candidate.name,
+        "Core": candidate.core.name,
+        "Redesign": REDESIGNS[candidate.core.name].label,
+        "Sensors (input 1, input 2)": f"({candidate.sensor_1.name}, {candidate.sensor_2.name})",
+        "ON": condition_results["ON"]["refines"],
+        "OFF-1": condition_results["OFF-1"]["refines"],
+        "OFF-2": condition_results["OFF-2"]["refines"],
+        "Full AND refinement": all(result["refines"] for result in condition_results.values()),
+    })
+redesigned_verification_table = pd.DataFrame(redesigned_verification_rows)
+display(redesigned_verification_table)
+
+redesigned_interval_rows = []
+for candidate in candidates[::2]:
+    row = {
+        "Core": candidate.core.name,
+        "Redesign": REDESIGNS[candidate.core.name].label,
+    }
+    for condition in conditions:
+        lo, hi = redesigned_condition_flux_interval(
+            candidate, condition.xi1_bounds, condition.xi2_bounds
+        )
+        row[condition.name] = f"[{lo:.3g}, {hi:.3g}]"
+    redesigned_interval_rows.append(row)
+pd.DataFrame(redesigned_interval_rows)
 """
     ),
 ]
@@ -516,14 +602,17 @@ regions are the corresponding specified environments.
     ),
     code(
         r"""
-fig, axes = plt.subplots(1, 3, figsize=(16.2, 5.2), constrained_layout=True)
+fig, axes = plt.subplots(2, 3, figsize=(16.2, 10.0), constrained_layout=True)
 last_mesh = None
 
-for ax, (core_name, candidate) in zip(axes, representatives.items()):
+for ax, (core_name, candidate) in zip(axes[0], representatives.items()):
     lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
     last_mesh = ax.pcolormesh(
         XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0,
-        vmax=max(envelope_summary["on_floors"].values()) * 1.8,
+        vmax=max(
+            max(envelope_summary["on_floors"].values()),
+            max(redesigned_envelope_summary["on_floors"].values()),
+        ) * 1.8,
     )
     ax.contourf(
         XI1, XI2, upper <= off1_condition.flux_threshold,
@@ -550,10 +639,53 @@ for ax, (core_name, candidate) in zip(axes, representatives.items()):
     add_region(ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
             "none", "#d9dde2", alpha=1.0, lw=1.4)
     ax.set_title(
-        f"{core_name}\ninitial design: full requirement fails",
+        f"{core_name}\ninitial design",
         fontsize=16,
         fontweight="bold",
     )
+
+for ax, (core_name, candidate) in zip(axes[1], representatives.items()):
+    lower, upper = redesigned_parameter_range_flux_bounds(candidate, XI1, XI2)
+    last_mesh = ax.pcolormesh(
+        XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0,
+        vmax=max(
+            max(envelope_summary["on_floors"].values()),
+            max(redesigned_envelope_summary["on_floors"].values()),
+        ) * 1.8,
+    )
+    ax.contourf(
+        XI1, XI2, upper <= off1_condition.flux_threshold,
+        levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.42
+    )
+    ax.contourf(
+        XI1, XI2, lower >= on_condition.flux_threshold,
+        levels=[0.5, 1.5], colors=["#79d18b"], alpha=0.30
+    )
+    if np.nanmin(upper) <= off1_condition.flux_threshold <= np.nanmax(upper):
+        ax.contour(
+            XI1, XI2, upper,
+            levels=[off1_condition.flux_threshold], colors=["white"],
+            linewidths=4.0, linestyles="dashed", zorder=4,
+        )
+    if np.nanmin(lower) <= on_condition.flux_threshold <= np.nanmax(lower):
+        ax.contour(
+            XI1, XI2, lower,
+            levels=[on_condition.flux_threshold], colors=["white"],
+            linewidths=4.0, linestyles="solid", zorder=4,
+        )
+    add_region(ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
+            "none", "#79d18b", alpha=1.0, lw=2.2)
+    add_region(ax, off1_condition.xi1_bounds, off1_condition.xi2_bounds,
+            "none", "#d9dde2", alpha=1.0, lw=1.4)
+    add_region(ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
+            "none", "#d9dde2", alpha=1.0, lw=1.4)
+    ax.set_title(
+        f"{core_name}\n{REDESIGNS[core_name].label}",
+        fontsize=16,
+        fontweight="bold",
+    )
+
+for ax in axes.ravel():
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlim(0.004, 0.75)
@@ -563,7 +695,7 @@ for ax, (core_name, candidate) in zip(axes, representatives.items()):
     ax.grid(which="both", alpha=0.12)
     ax.tick_params(axis="both", which="both", labelsize=16)
 
-cbar = fig.colorbar(last_mesh, ax=axes, shrink=0.86, pad=0.02)
+cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.86, pad=0.02)
 cbar.set_label("worst-case lower output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
 legend = [
@@ -600,9 +732,10 @@ plt.show()
 - Ordered Marionette sensor assignments differ before the RPU interface but
   deliberately share downstream verification results. This is the reusable
   abstraction that enables later combinatorial exploration.
-- None of the initial cores meets the broadened LOW-input requirement. This is
-  a design result: the branch gains must be retuned or the integration response
-  must be made steeper before an implementation can be selected.
+- The upper row shows the unchanged initial designs; the lower row shows the
+  approved mechanism-specific redesigns under the same top-level thresholds.
+- Redesigned candidates are reported as passes or failures directly. No
+  redesign parameter is adjusted after seeing the refinement result.
 """
     ),
 ]
