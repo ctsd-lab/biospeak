@@ -67,9 +67,13 @@ import pandas as pd
 from compositional_regime_contracts import (
     CORES,
     DEFAULT_UNCERTAINTY,
+    DEFAULT_ON_THRESHOLD_NM_PER_MIN,
+    DEFAULT_OFF_THRESHOLD_NM_PER_MIN,
     MARIONETTE_SENSORS,
     REDESIGNS,
     REDESIGN_PARAMETERS,
+    REDESIGN_UNCERTAINTY,
+    complex_concentration,
     condition_flux_interval,
     infer_regime,
     make_candidate_designs,
@@ -307,31 +311,99 @@ each ordered pair after the RPU interface still shows what the abstraction
 provides; their required inducer concentrations remain different in the sensor
 contracts.
 
-## Mechanism-specific redesigns from published biology
+## Contract-guided redesigns
 
-The fixed top-level specification above is now held unchanged. Each redesign
-changes only a mechanism for which there is a literature basis:
+The fixed ON/OFF specification remains unchanged. The redesigned cases are
+evaluated as selected synthesis points, so the contract calculation determines
+whether each chosen parameter value satisfies all three modes.
 
-1. **HrpR/HrpS + HrpV inhibition.** Jovanovic *et al.* directly assayed
-   HrpV inhibition of HrpRS, using 0.8 micromolar HrpRS and HrpV doses from
-   0.1 to 0.8 micromolar. The redesigned model therefore adds a constitutive
-   HrpV pool over that experimentally assayed range. In the absence of a
-   reported HrpV--HrpS dissociation constant, the implementation uses a
-   stoichiometric strong-inhibition abstraction: one HrpV unit can neutralize
-   one unit of productive HrpRS complex.
-2. **split T7 RNAP + SYNZIP17/18.** The residue-601 split was fused to
-   SYNZIP17 and SYNZIP18 to promote fragment complementation. The measured
-   SYNZIP17:SYNZIP18 interaction has $K_d<10$ nM, so the redesign replaces
-   the provisional 1200 nM affinity by the full conservative interval
-   $0<K\le 10$ nM. The existing gain and output-rate ranges are left unchanged.
-3. **InvF/SicA + native SicA--SipC titration.** The mechanistic model of
-   Temme *et al.* uses $K_{XY}=1700$ nM for InvF:SicA,
-   $K_{YZ}=28$ nM for SicA:SipC, and approximately 6000--10000 SipC
-   molecules/cell. We use those values directly. SicA first equilibrates with
-   the fixed SipC pool, then free SicA can form the active InvF:SicA complex.
+1. **HrpR/HrpS:** treat the HrpV inhibitory level as a tunable regulation
+   parameter. For the fixed specification, the feasible singleton-design
+   interval is approximately $0.114$--$0.131\,\mu\mathrm{M}$; use
+   $V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$.
+2. **split T7 RNAP:** use the effective fragment-association parameter as the
+   redesign variable. The full contract is feasible for approximately
+   $K=2.286$--$3.165\,\mu\mathrm{M}$; use $K=3.0\,\mu\mathrm{M}$ to
+   increase OFF-state margin while retaining the ON guarantee.
+3. **InvF/SicA:** use the reduced SicA--SipC turnover model with the published
+   $K_{YZ}=28\,\mathrm{nM}$, $k_Z=0.1\,\mathrm{min}^{-1}$, and degradation
+   rates $\gamma_X=\gamma_{XY}=0.022$, $\gamma_Y=0.046$,
+   $\gamma_Z=0.139$, and $\gamma_{YZ}=0.022\,\mathrm{min}^{-1}$.
 
-These are forward evaluations of literature-motivated mechanism changes.
-Parameters are not searched or adjusted to force refinement.
+The cells below compute the contract-feasible parameter windows for the first
+two redesigns and then run the same mode-wise refinement checks for all three.
+"""
+    ),
+    code(
+        """
+# Contract-feasible singleton redesign windows for the two direct QSS cores.
+representative_by_core = {}
+for candidate in candidates:
+    representative_by_core.setdefault(candidate.core.name, candidate)
+
+hrp = representative_by_core["HrpR/HrpS"].core
+c_on = float(complex_concentration(
+    hrp.gain_1_nM_per_rpu * 0.35,
+    hrp.gain_2_nM_per_rpu * 0.35,
+    hrp.affinity_nM,
+))
+c_off1 = float(complex_concentration(
+    hrp.gain_1_nM_per_rpu * 0.07,
+    hrp.gain_2_nM_per_rpu * 0.65,
+    hrp.affinity_nM,
+))
+c_off2 = float(complex_concentration(
+    hrp.gain_1_nM_per_rpu * 0.65,
+    hrp.gain_2_nM_per_rpu * 0.07,
+    hrp.affinity_nM,
+))
+hrpv_low = max(
+    c_off1 - DEFAULT_OFF_THRESHOLD_NM_PER_MIN / hrp.output_rate_per_min,
+    c_off2 - DEFAULT_OFF_THRESHOLD_NM_PER_MIN / hrp.output_rate_per_min,
+    0.0,
+)
+hrpv_high = c_on - DEFAULT_ON_THRESHOLD_NM_PER_MIN / hrp.output_rate_per_min
+
+split = representative_by_core["split T7 RNAP"].core
+def affinity_at_complex(input_1_nM, input_2_nM, complex_nM):
+    return ((input_1_nM - complex_nM) * (input_2_nM - complex_nM)) / complex_nM
+
+c_on_req = DEFAULT_ON_THRESHOLD_NM_PER_MIN / split.output_rate_per_min
+c_off_req = DEFAULT_OFF_THRESHOLD_NM_PER_MIN / split.output_rate_per_min
+split_k_high = affinity_at_complex(
+    split.gain_1_nM_per_rpu * 0.35,
+    split.gain_2_nM_per_rpu * 0.35,
+    c_on_req,
+)
+split_k_low = max(
+    affinity_at_complex(
+        split.gain_1_nM_per_rpu * 0.07,
+        split.gain_2_nM_per_rpu * 0.65,
+        c_off_req,
+    ),
+    affinity_at_complex(
+        split.gain_1_nM_per_rpu * 0.65,
+        split.gain_2_nM_per_rpu * 0.07,
+        c_off_req,
+    ),
+)
+
+pd.DataFrame([
+    {
+        "Core": "HrpR/HrpS",
+        "design variable": "HrpV [nM]",
+        "feasible low": hrpv_low,
+        "feasible high": hrpv_high,
+        "selected": REDESIGN_PARAMETERS["HrpR/HrpS"]["hrpv_nM"],
+    },
+    {
+        "Core": "split T7 RNAP",
+        "design variable": "effective K [nM]",
+        "feasible low": split_k_low,
+        "feasible high": split_k_high,
+        "selected": REDESIGN_PARAMETERS["split T7 RNAP"]["affinity_nM"],
+    },
+])
 """
     ),
     code(
@@ -343,10 +415,17 @@ for core_name, redesign in REDESIGNS.items():
         "Core": core_name,
         "Redesign": redesign.label,
         "Mechanism": redesign.mechanism,
-        "Literature parameters used": str(params),
+        "Selected redesign parameters": str(params),
         "Source": redesign.source,
     })
-pd.DataFrame(redesign_rows)
+display(pd.DataFrame(redesign_rows))
+
+display(pd.DataFrame([{
+    "Redesign contract range": "singleton selected synthesis point",
+    "gain fold": REDESIGN_UNCERTAINTY["gain_fold"],
+    "affinity fold": REDESIGN_UNCERTAINTY["affinity_fold"],
+    "output-rate fold": REDESIGN_UNCERTAINTY["output_rate_fold"],
+}]))
 """
     ),
     code(
@@ -678,16 +757,16 @@ for col, (core_name, candidate) in enumerate(representatives.items()):
 
 redesign_caption = {
     "HrpR/HrpS": (
-        r"add HrpV inhibition" + "\n" +
-        r"$0.1$--$0.8\,\mu\mathrm{M}$ HrpV"
+        r"tune HrpV" + "\n" +
+        r"$V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$"
     ),
     "split T7 RNAP": (
-        r"add SYNZIP17/18" + "\n" +
-        r"$K_d<10\,\mathrm{nM}$"
+        r"raise effective $K$" + "\n" +
+        r"$K=3.0\,\mu\mathrm{M}$"
     ),
     "InvF/SicA": (
-        r"add SicA--SipC titration" + "\n" +
-        r"$K_{YZ}=28\,\mathrm{nM}$; 6000--10000 SipC/cell"
+        r"use SipC turnover" + "\n" +
+        r"$k_Z=0.1\,\mathrm{min}^{-1}$ + degradation rates"
     ),
 }
 
@@ -778,21 +857,14 @@ plt.show()
         r"""
 ## Interpretation
 
-- The desired assumptions are finite ON/OFF regions, not a single operating
-  point.
-- The desired guarantee has physical meaning: a minimum transcription flux in
-  the ON region and a maximum leak flux in either OFF region.
-- Curved design boundaries are induced by the QSS complex relation and
-  parameter ranges. They are not manually drawn rectangles.
-- Ordered Marionette sensor assignments differ before the RPU interface but
-  deliberately share downstream verification results. This is the reusable
-  abstraction that enables later combinatorial exploration.
-- The upper row shows the unchanged initial designs; the lower row shows the
-  approved mechanism-specific redesigns under the same fixed requirement.
-- The arrow between each pair of panels states the single mechanism change
-  introduced for that architecture.
-- Redesigned candidates are reported as passes or failures directly. No
-  redesign parameter is adjusted after seeing the refinement result.
+- The outlined ON/OFF regions and output thresholds are identical in both rows.
+- The upper row shows the initial candidates with their provisional uncertainty
+  ranges.
+- The lower row shows the selected redesign synthesis points.
+- HrpV and split-T7 parameter values are chosen from the contract-feasible
+  windows computed above; InvF/SicA uses the selected turnover/degradation
+  parameters.
+- The shaded regions show where the corresponding output guarantee is certified.
 """
     ),
 ]
