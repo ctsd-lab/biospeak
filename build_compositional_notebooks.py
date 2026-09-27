@@ -60,7 +60,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib"))
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.patches import FancyArrowPatch, Patch, Rectangle
 import numpy as np
 import pandas as pd
 
@@ -591,67 +591,38 @@ shading is the common set where the OFF ceiling is guaranteed.
     ),
     markdown(
         r"""
-## Core-by-core output maps
+## Initial designs and mechanism-specific redesigns
+
+Each column follows one biological architecture from its initial design in the
+top row to its literature-grounded redesign in the bottom row. The outlined ON
+and OFF regions are the same fixed top-level requirement in every panel:
+$y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
+The arrow between rows states the mechanism change used for that architecture.
 
 Color gives the worst-case lower output flux over the stated parameter ranges.
 Green shading marks inputs where the ON floor is guaranteed, and gray shading
 marks inputs where the OFF ceiling is guaranteed. Thick white contours show
-the two output thresholds: solid for ON and dashed for OFF. The outlined
-regions are the corresponding specified environments.
+the two output thresholds: solid for ON and dashed for OFF.
 """
     ),
     code(
         r"""
-fig, axes = plt.subplots(2, 3, figsize=(16.2, 10.0), constrained_layout=True)
+fig, axes = plt.subplots(2, 3, figsize=(16.8, 11.0))
+fig.subplots_adjust(
+    left=0.075, right=0.89, top=0.88, bottom=0.16,
+    wspace=0.28, hspace=0.62,
+)
+
 last_mesh = None
+vmax = max(
+    max(envelope_summary["on_floors"].values()),
+    max(redesigned_envelope_summary["on_floors"].values()),
+) * 1.8
 
-for ax, (core_name, candidate) in zip(axes[0], representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
-    last_mesh = ax.pcolormesh(
-        XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0,
-        vmax=max(
-            max(envelope_summary["on_floors"].values()),
-            max(redesigned_envelope_summary["on_floors"].values()),
-        ) * 1.8,
-    )
-    ax.contourf(
-        XI1, XI2, upper <= off1_condition.flux_threshold,
-        levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.42
-    )
-    ax.contourf(
-        XI1, XI2, lower >= on_condition.flux_threshold,
-        levels=[0.5, 1.5], colors=["#79d18b"], alpha=0.30
-    )
-    ax.contour(
-        XI1, XI2, upper,
-        levels=[off1_condition.flux_threshold], colors=["white"],
-        linewidths=4.0, linestyles="dashed", zorder=4,
-    )
-    ax.contour(
-        XI1, XI2, lower,
-        levels=[on_condition.flux_threshold], colors=["white"],
-        linewidths=4.0, linestyles="solid", zorder=4,
-    )
-    add_region(ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
-            "none", "#79d18b", alpha=1.0, lw=2.2)
-    add_region(ax, off1_condition.xi1_bounds, off1_condition.xi2_bounds,
-            "none", "#d9dde2", alpha=1.0, lw=1.4)
-    add_region(ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
-            "none", "#d9dde2", alpha=1.0, lw=1.4)
-    ax.set_title(
-        f"{core_name}\ninitial design",
-        fontsize=16,
-        fontweight="bold",
-    )
-
-for ax, (core_name, candidate) in zip(axes[1], representatives.items()):
-    lower, upper = redesigned_parameter_range_flux_bounds(candidate, XI1, XI2)
-    last_mesh = ax.pcolormesh(
-        XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0,
-        vmax=max(
-            max(envelope_summary["on_floors"].values()),
-            max(redesigned_envelope_summary["on_floors"].values()),
-        ) * 1.8,
+def draw_flux_panel(ax, lower, upper, title):
+    global last_mesh
+    mesh = ax.pcolormesh(
+        XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0, vmax=vmax,
     )
     ax.contourf(
         XI1, XI2, upper <= off1_condition.flux_threshold,
@@ -673,19 +644,19 @@ for ax, (core_name, candidate) in zip(axes[1], representatives.items()):
             levels=[on_condition.flux_threshold], colors=["white"],
             linewidths=4.0, linestyles="solid", zorder=4,
         )
-    add_region(ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
-            "none", "#79d18b", alpha=1.0, lw=2.2)
-    add_region(ax, off1_condition.xi1_bounds, off1_condition.xi2_bounds,
-            "none", "#d9dde2", alpha=1.0, lw=1.4)
-    add_region(ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
-            "none", "#d9dde2", alpha=1.0, lw=1.4)
-    ax.set_title(
-        f"{core_name}\n{REDESIGNS[core_name].label}",
-        fontsize=16,
-        fontweight="bold",
+    add_region(
+        ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
+        "none", "#79d18b", alpha=1.0, lw=2.2
     )
-
-for ax in axes.ravel():
+    add_region(
+        ax, off1_condition.xi1_bounds, off1_condition.xi2_bounds,
+        "none", "#d9dde2", alpha=1.0, lw=1.4
+    )
+    add_region(
+        ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
+        "none", "#d9dde2", alpha=1.0, lw=1.4
+    )
+    ax.set_title(title, fontsize=16, fontweight="bold")
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlim(0.004, 0.75)
@@ -694,16 +665,94 @@ for ax in axes.ravel():
     ax.set_ylabel(r"$\xi_2$ [RPU]")
     ax.grid(which="both", alpha=0.12)
     ax.tick_params(axis="both", which="both", labelsize=16)
+    return mesh
 
-cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.86, pad=0.02)
+for col, (core_name, candidate) in enumerate(representatives.items()):
+    lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
+    last_mesh = draw_flux_panel(axes[0, col], lower, upper, core_name)
+
+    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
+        candidate, XI1, XI2
+    )
+    last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new, core_name)
+
+redesign_caption = {
+    "HrpR/HrpS": (
+        r"add HrpV inhibition" + "\n" +
+        r"$0.1$--$0.8\,\mu\mathrm{M}$ HrpV"
+    ),
+    "split T7 RNAP": (
+        r"add SYNZIP17/18" + "\n" +
+        r"$K_d<10\,\mathrm{nM}$"
+    ),
+    "InvF/SicA": (
+        r"add SicA--SipC titration" + "\n" +
+        r"$K_{YZ}=28\,\mathrm{nM}$; 6000--10000 SipC/cell"
+    ),
+}
+
+# Draw one explicit design-change arrow per column.
+fig.canvas.draw()
+for col, core_name in enumerate(representatives):
+    top_box = axes[0, col].get_position()
+    bottom_box = axes[1, col].get_position()
+    x_mid = 0.5 * (top_box.x0 + top_box.x1)
+    y_start = top_box.y0 - 0.012
+    y_end = bottom_box.y1 + 0.012
+    arrow = FancyArrowPatch(
+        (x_mid, y_start),
+        (x_mid, y_end),
+        transform=fig.transFigure,
+        arrowstyle="-|>",
+        mutation_scale=18,
+        linewidth=1.5,
+        clip_on=False,
+    )
+    fig.add_artist(arrow)
+    fig.text(
+        x_mid,
+        0.5 * (y_start + y_end),
+        redesign_caption[core_name],
+        ha="center",
+        va="center",
+        fontsize=12,
+        bbox={"facecolor": "white", "edgecolor": "none", "pad": 1.5},
+    )
+
+fig.text(
+    0.018, 0.675, "Initial designs",
+    rotation=90, va="center", ha="center",
+    fontsize=16, fontweight="bold",
+)
+fig.text(
+    0.018, 0.305, "Mechanism-specific redesigns",
+    rotation=90, va="center", ha="center",
+    fontsize=16, fontweight="bold",
+)
+fig.suptitle(
+    "Fixed AND requirement across initial and redesigned architectures",
+    fontsize=16,
+    fontweight="bold",
+)
+fig.text(
+    0.5, 0.91,
+    r"ON: $y\ge 120\,\mathrm{nM/min}$; OFF: $y\le 60\,\mathrm{nM/min}$",
+    ha="center",
+    va="center",
+    fontsize=14,
+)
+
+cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.82, pad=0.025)
 cbar.set_label("worst-case lower output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
+
 legend = [
     Patch(facecolor="#79d18b", edgecolor="#79d18b", alpha=0.30,
           label="guaranteed ON output"),
     Patch(facecolor="#cfd5dd", edgecolor="#cfd5dd", alpha=0.42,
           label="guaranteed OFF output"),
-    Patch(facecolor="none", edgecolor="#79d18b", label="specified ON environment"),
+    Patch(facecolor="none", edgecolor="#79d18b",
+          label="specified ON environment"),
     Patch(facecolor="none", edgecolor="#777777",
           label="specified OFF environments"),
     Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="solid",
@@ -711,7 +760,13 @@ legend = [
     Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="dashed",
            label="OFF threshold"),
 ]
-fig.legend(handles=legend, loc="outside lower center", ncol=3, frameon=False)
+fig.legend(
+    handles=legend,
+    loc="lower center",
+    bbox_to_anchor=(0.49, 0.035),
+    ncol=3,
+    frameon=False,
+)
 
 output_base = Path("compositional_design_flux_maps")
 fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
@@ -733,7 +788,9 @@ plt.show()
   deliberately share downstream verification results. This is the reusable
   abstraction that enables later combinatorial exploration.
 - The upper row shows the unchanged initial designs; the lower row shows the
-  approved mechanism-specific redesigns under the same top-level thresholds.
+  approved mechanism-specific redesigns under the same fixed requirement.
+- The arrow between each pair of panels states the single mechanism change
+  introduced for that architecture.
 - Redesigned candidates are reported as passes or failures directly. No
   redesign parameter is adjusted after seeing the refinement result.
 """
