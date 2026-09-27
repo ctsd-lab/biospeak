@@ -178,14 +178,18 @@ design_table
         r"""
 ## Top-level AND-gate specification
 
-The desired AND behavior contains one ON region and two OFF regions:
+The desired AND behavior contains one ON region and two mixed OFF regions:
 \[
-(\xi_1,\xi_2)\in B_{\rm ON}\Longrightarrow y\ge y_{\rm ON},
+(\xi_1,\xi_2)\in H\times H\Longrightarrow y\ge y_{\rm ON},
 \]
 \[
-\xi_1\in B_{\rm OFF}\ \text{or}\ \xi_2\in B_{\rm OFF}
-\Longrightarrow y\le y_{\rm OFF}.
+(\xi_1,\xi_2)\in L\times H\Longrightarrow y\le y_{\rm OFF},
+\qquad
+(\xi_1,\xi_2)\in H\times L\Longrightarrow y\le y_{\rm OFF}.
 \]
+By the monotonicity result developed for the model class, the LOW--LOW case is
+already implied by either mixed OFF condition and is not introduced as a
+separate contract mode.
 The input regions are stated in promoter activity units. The ON region lies inside
 the experimentally useful Marionette RPU range. The OFF interval begins near
 the characterized leak floors and extends to 20% of the ON onset; the interval
@@ -224,15 +228,17 @@ display(condition_table)
         r"""
 ## Composition and formal checks
 
-For a finite operating region, the catalytic-core contract uses the globally valid
+For each finite operating region, the catalytic-core contract uses the globally valid
 bounds
 \[
 \frac{Y_1Y_2}{K+Y_1+Y_2}\le C_3
 \le\min\left\{Y_1,Y_2,\frac{Y_1Y_2}{K}\right\}.
 \]
 Monotonic endpoint bounds tighten this contract over each region. The fixed
-initial design parameters are used when composing the two lumped expression
-contracts with the core contract. A design implements the complete AND
+design parameters are used when composing the two lumped expression contracts
+with the core contract. Upstream gain guarantees and downstream core
+assumptions use the same closed boundaries exactly; no numerical padding is
+introduced. A design implements the complete AND
 specification only if it refines the ON, OFF-1, and OFF-2 contracts.
 
 The top-level object is therefore the mode-indexed family
@@ -292,13 +298,13 @@ pd.DataFrame(interval_rows)
         r"""
 ### Initial design insight
 
-The broadened LOW range exposes a limitation that the leak-only specification
-hid: none of the three direct complex-formation cores satisfies the complete
-AND contract. HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF
-ceiling; split T7 RNAP also falls slightly below the ON target. The equality of
-each ordered pair after the RPU interface still shows what the abstraction
-provides; their required inducer concentrations remain different in the sensor
-contracts.
+At the fixed initial parameter values, none of the three cores satisfies all
+three modes. HrpR/HrpS satisfies the ON requirement but exceeds both OFF
+ceilings. Split T7 RNAP satisfies the ON requirement but exceeds both OFF
+ceilings. InvF/SicA satisfies the ON and OFF-1 requirements but exceeds the
+OFF-2 ceiling. The equality of each ordered sensor pair after the RPU interface
+still shows what the abstraction provides; their required inducer
+concentrations remain different in the sensor contracts.
 
 ## Contract-guided redesigns
 
