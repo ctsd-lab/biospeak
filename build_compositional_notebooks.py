@@ -570,7 +570,7 @@ plt.show()
         r"""
 ## What the heatmap shading means
 
-For each mode $q\in\{\mathrm{ON},\mathrm{OFF\mbox{-}1},\mathrm{OFF\mbox{-}2\}$, the
+For each mode $q\in\{\mathrm{ON},\mathrm{OFF-1},\mathrm{OFF-2\}$, the
 conditional specification is
 \[
 \mathcal C_{\rm spec}^q=(A_q,G_q).
