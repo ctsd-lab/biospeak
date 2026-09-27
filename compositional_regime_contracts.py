@@ -322,7 +322,7 @@ def nominal_flux(
     )
 
 
-def parameter_range_flux_bounds(
+def initial_flux_bounds(
     candidate: Candidate,
     xi_1_rpu: np.ndarray | float,
     xi_2_rpu: np.ndarray | float,
@@ -415,7 +415,7 @@ def _invf_sica_turnover_flux(
     return core.output_rate_per_min * c_xy
 
 
-def redesigned_parameter_range_flux_bounds(
+def redesigned_flux_bounds(
     candidate: Candidate,
     xi_1_rpu: np.ndarray | float,
     xi_2_rpu: np.ndarray | float,
@@ -468,10 +468,10 @@ def redesigned_condition_flux_interval(
 ) -> tuple[float, float]:
     """Return redesigned flux extrema over one rectangular mode."""
 
-    lower, _ = redesigned_parameter_range_flux_bounds(
+    lower, _ = redesigned_flux_bounds(
         candidate, xi1_bounds[0], xi2_bounds[0]
     )
-    _, upper = redesigned_parameter_range_flux_bounds(
+    _, upper = redesigned_flux_bounds(
         candidate, xi1_bounds[1], xi2_bounds[1]
     )
     return float(lower), float(upper)
@@ -484,10 +484,10 @@ def condition_flux_interval(
 ) -> tuple[float, float]:
     """Return fixed-parameter flux extrema over one rectangular mode."""
 
-    lower, _ = parameter_range_flux_bounds(
+    lower, _ = initial_flux_bounds(
         candidate, xi1_bounds[0], xi2_bounds[0]
     )
-    _, upper = parameter_range_flux_bounds(
+    _, upper = initial_flux_bounds(
         candidate, xi1_bounds[1], xi2_bounds[1]
     )
     return float(lower), float(upper)
