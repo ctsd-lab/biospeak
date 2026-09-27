@@ -100,7 +100,7 @@ A compatible ODE realization introduces an inhibited complex $I$:
 \begin{align}
 \dot Q&=k_f(R_{\rm tot}-Q)(S_{\rm tot}-Q)-k_rQ,\\
 \dot I&=k_v^+(Q-I)(V_{\rm tot}-I)-k_v^-I,\\
-\dot P&=k^ý\rm out}(Q-I).
+\dot P&=k_{\rm out}(Q-I).
 \end{align}
 In the fast, strong-inhibition limit,
 \[
@@ -114,14 +114,14 @@ Contract satisfaction gives
 \[
 V_{\rm eff}\ge
 \max\left\{
-C_{\rm OFF,1}-\frac{y_{\rm off}}{k^ý\rm out}},
+C_{\rm OFF,1}-\frac{y_{\rm off}}{k_{\rm out}},
 C_{\rm OFF,2}-\frac{y_{\rm off}}{k_{\rm out}},0
 \right\},
 \]
 and
 \[
 V_{\rm eff}\le
-C_{\rm ON}-\frac{y_{\rm on}}{k^ý\rm out}}.
+C_{\rm ON}-\frac{y_{\rm on}}{k_{\rm out}}.
 \]
 The current computation gives approximately
 \[
@@ -153,7 +153,7 @@ and uses $K=3.0~\mu{\rm M}$.
 
 The initial effective parameters are
 \[
-K^ýXY}=250~{\rm nM},\quad k_{\rm out}=1~{\rm min}^{-1},\quad
+K_{XY}=250~{\rm nM},\quad k_{\rm out}=1~{\rm min}^{-1},\quad
 g_1=800~{\rm nM/RPU},\quad g_2=4000~{\rm nM/RPU}.
 \]
 The initial design uses the direct complex model above.
@@ -163,20 +163,20 @@ SipC, $C_{XY}$ the active InvF:SicA complex, and $C_{YZ}$ the SicA:SipC
 complex. A full ODE realization consistent with the reduced steady-state
 calculation is
 \begin{align}
-\dot X&=p_X-\gamma_XX-k_{XY}^+XY+k^ýXY}^-C_{XY},\\
-\dot Y&=p_Y-\gamma_YY-k_{XY}^+XY+k^ýXY}^-C_{XY}
+\dot X&=p_X-\gamma_XX-k_{XY}^+XY+k_{XY}^-C_{XY},\\
+\dot Y&=p_Y-\gamma_YY-k_{XY}^+XY+k_{XY}^-C_{XY}
 -k_{YZ}^+YZ+(k_{YZ}^-+k_Z)C_{YZ},\\
-\dot Z&=p_Z-\gamma_ZZ-k_{YZ}^+YZ+k^ýYZ}^-C_{YZ},\\
-\dot C_{XY}&=k_{XY}^+XY-k^ýXY}^-C_{XY}-\gamma_{XY}C_{XY},\\
-\dot C_{YZ}&=k_{YZ}^+YZ-k^ýYZ}^-C_{YZ}
+\dot Z&=p_Z-\gamma_ZZ-k_{YZ}^+YZ+k_{YZ}^-C_{YZ},\\
+\dot C_{XY}&=k_{XY}^+XY-k_{XY}^-C_{XY}-\gamma_{XY}C_{XY},\\
+\dot C_{YZ}&=k_{YZ}^+YZ-k_{YZ}^-C_{YZ}
 -(\gamma_{YZ}+k_Z)C_{YZ},\\
-\dot P&=k^ý\rm out}C_{XY}.
+\dot P&=k_{\rm out}C_{XY}.
 \end{align}
 The $k_ZC_{YZ}$ term releases SicA while removing the SipC partner.
 
 The implemented computation uses the fast-binding relations
 \[
-C_{XY}=\frac{XY}{K^ýXY}},\qquad
+C_{XY}=\frac{XY}{K_{XY}},\qquad
 C_{YZ}=\frac{YZ}{K_{YZ}},
 \]
 and steady-state balances
@@ -207,7 +207,7 @@ $k_{\rm out}=1~{\rm min}^{-1}$.
 \paragraph{Monotonicity of the reduced InvF/SicA model.}
 Define
 \[
-h(Y)=\frac{Y}{K^ýXY}\gamma_X+\gamma_{XY}Y},\qquad
+h(Y)=\frac{Y}{K_{XY}\gamma_X+\gamma_{XY}Y},\qquad
 q(Y)=\frac{Y}{K_{YZ}\gamma_Z+(\gamma_{YZ}+k_Z)Y}.
 \]
 Then
@@ -253,7 +253,7 @@ $(\xi_1,\xi_2)$, which justifies its corner-based mode certification.
 The current code constructs a local core contract for each top-level input
 region. This can be formalized as a contract abstraction operator
 \[
-\mathfrak C^ý\Sigma}(B,\Theta),
+\mathfrak C_{\Sigma}(B,\Theta),
 \]
 where $\Sigma$ is the subsystem, $B=[\underline\xi,\overline\xi]$ is a finite
 input box, and $\Theta$ is the parameter set used for verification.
