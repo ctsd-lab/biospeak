@@ -1,4 +1,4 @@
-"""Contracts and parameter-range calculations for the compositional AND gate.
+"""Contracts and fixed-parameter calculations for the compositional AND gate.
 
 The external interface uses promoter activities ``xi_1`` and ``xi_2`` in
 relative promoter units (RPU). Two lumped expression modules produce the
@@ -160,12 +160,6 @@ CORES = (
 )
 
 
-DEFAULT_UNCERTAINTY = {
-    "gain_fold": 1.25,
-    "affinity_fold": 1.30,
-    "output_rate_fold": 1.25,
-}
-
 
 DEFAULT_ON_BOX = ((0.35, 0.65), (0.35, 0.65))
 DEFAULT_OFF_INTERVAL = (0.0055, 0.07)
@@ -174,14 +168,12 @@ DEFAULT_OFF_THRESHOLD_NM_PER_MIN = 60.0
 
 # Mechanism-specific redesign parameters.
 #
-# The initial candidates retain the broad provisional uncertainty factors above.
-# The redesigned candidates below are synthesis points: each selected parameter
-# value is treated as a singleton contract so that the notebook can demonstrate
-# the design step itself. Robustness around these new settings can be added once
-# the redesigned parts are characterized.
+# Both initial and redesigned candidates are evaluated at fixed selected
+# parameter values. The contract assumptions still cover the complete ON/OFF
+# input regions; the parameter values define the designs being compared.
 #
 # HrpR/HrpS: HrpV is treated as a tunable regulatory level. For the fixed
-# ON/OFF specification and singleton redesigned parameters, the feasible HrpV
+# ON/OFF specification and fixed redesigned parameters, the feasible HrpV
 # interval is approximately 114.4--130.7 nM; use 120 nM.
 #
 # split T7: use the effective fragment-association parameter as the redesign
@@ -196,11 +188,6 @@ DEFAULT_OFF_THRESHOLD_NM_PER_MIN = 60.0
 # k0 = 1 transcript/min.
 MOLECULE_TO_NM_AT_1_FL = 1.0e24 / 6.02214076e23
 
-REDESIGN_UNCERTAINTY = {
-    "gain_fold": 1.0,
-    "affinity_fold": 1.0,
-    "output_rate_fold": 1.0,
-}
 
 REDESIGNS = {
     "HrpR/HrpS": MechanismRedesign(
@@ -267,10 +254,11 @@ REDESIGN_PARAMETERS = {
     },
 }
 
-# Finite upper approximation used only when a stoichiometric threshold gives
-# an exact zero output. In the original flux coordinate y=0 satisfies
-# y <= ZERO_FLUX_UPPER_EPS; this lets the corresponding sound upper guarantee
-# be represented with a finite logarithmic constant.
+# Numerical representation floor used only when the physical model gives
+# exactly zero output but the contract must be represented in z_flux=log(y).
+# This is not a biological leak term or physical model parameter: the original
+# model value remains y=0, while the log-coordinate contract uses
+# y <= ZERO_FLUX_UPPER_EPS to obtain a finite logarithmic constant.
 ZERO_FLUX_UPPER_EPS = 1.0e-12
 
 
@@ -334,34 +322,20 @@ def nominal_flux(
     )
 
 
-def parameter_range_flux_bounds(
+def initial_flux_bounds(
     candidate: Candidate,
     xi_1_rpu: np.ndarray | float,
     xi_2_rpu: np.ndarray | float,
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return monotonic lower and upper flux bounds over parameter ranges."""
+    """Return the fixed-parameter flux envelope.
 
-    core = candidate.core
-    gain_fold = uncertainty["gain_fold"]
-    affinity_fold = uncertainty["affinity_fold"]
-    rate_fold = uncertainty["output_rate_fold"]
-    xi_1 = np.asarray(xi_1_rpu, dtype=float)
-    xi_2 = np.asarray(xi_2_rpu, dtype=float)
+    The initial design parameters are fixed. The two returned arrays coincide;
+    the pair interface is retained because the plotting and contract code use a
+    common lower/upper-envelope representation.
+    """
 
-    lower_complex = complex_concentration(
-        core.gain_1_nM_per_rpu / gain_fold * xi_1,
-        core.gain_2_nM_per_rpu / gain_fold * xi_2,
-        core.affinity_nM * affinity_fold,
-    )
-    upper_complex = complex_concentration(
-        core.gain_1_nM_per_rpu * gain_fold * xi_1,
-        core.gain_2_nM_per_rpu * gain_fold * xi_2,
-        core.affinity_nM / affinity_fold,
-    )
-    lower = core.output_rate_per_min / rate_fold * lower_complex
-    upper = core.output_rate_per_min * rate_fold * upper_complex
-    return lower, upper
+    flux = nominal_flux(candidate, xi_1_rpu, xi_2_rpu)
+    return flux, flux
 
 
 def _invf_sica_turnover_flux(
@@ -441,17 +415,16 @@ def _invf_sica_turnover_flux(
     return core.output_rate_per_min * c_xy
 
 
-def redesigned_parameter_range_flux_bounds(
+def redesigned_flux_bounds(
     candidate: Candidate,
     xi_1_rpu: np.ndarray | float,
     xi_2_rpu: np.ndarray | float,
-    uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return lower/upper flux bounds for the selected redesigned design point.
+    """Return the fixed-parameter flux envelope for a redesigned architecture.
 
-    The redesign stage uses singleton parameter sets. Thus the lower and upper
-    bounds coincide for these selected synthesis points. Initial candidates
-    retain the broader provisional uncertainty ranges in DEFAULT_UNCERTAINTY.
+    The selected redesign parameters are fixed, while the input variables range
+    over the complete contract region. The two returned arrays therefore
+    coincide.
     """
 
     core = candidate.core
@@ -492,15 +465,14 @@ def redesigned_condition_flux_interval(
     candidate: Candidate,
     xi1_bounds: tuple[float, float],
     xi2_bounds: tuple[float, float],
-    uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> tuple[float, float]:
-    """Return worst-case redesigned flux extrema over one rectangular mode."""
+    """Return redesigned flux extrema over one rectangular mode."""
 
-    lower, _ = redesigned_parameter_range_flux_bounds(
-        candidate, xi1_bounds[0], xi2_bounds[0], uncertainty
+    lower, _ = redesigned_flux_bounds(
+        candidate, xi1_bounds[0], xi2_bounds[0]
     )
-    _, upper = redesigned_parameter_range_flux_bounds(
-        candidate, xi1_bounds[1], xi2_bounds[1], uncertainty
+    _, upper = redesigned_flux_bounds(
+        candidate, xi1_bounds[1], xi2_bounds[1]
     )
     return float(lower), float(upper)
 
@@ -509,15 +481,14 @@ def condition_flux_interval(
     candidate: Candidate,
     xi1_bounds: tuple[float, float],
     xi2_bounds: tuple[float, float],
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> tuple[float, float]:
-    """Return worst-case flux extrema over a rectangular promoter-activity box."""
+    """Return fixed-parameter flux extrema over one rectangular mode."""
 
-    lower, _ = parameter_range_flux_bounds(
-        candidate, xi1_bounds[0], xi2_bounds[0], uncertainty
+    lower, _ = initial_flux_bounds(
+        candidate, xi1_bounds[0], xi2_bounds[0]
     )
-    _, upper = parameter_range_flux_bounds(
-        candidate, xi1_bounds[1], xi2_bounds[1], uncertainty
+    _, upper = initial_flux_bounds(
+        candidate, xi1_bounds[1], xi2_bounds[1]
     )
     return float(lower), float(upper)
 
@@ -541,17 +512,15 @@ def create_expression_contract(
     branch: int,
     sensor: Sensor,
     gain_nM_per_rpu: float,
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> PolyhedralIoContract:
-    """Create a lumped promoter-activity to component-abundance contract."""
+    """Create the fixed-gain promoter-activity to abundance contract."""
 
     if branch not in (1, 2):
         raise ValueError("branch must be 1 or 2")
     z_xi = f"z_xi{branch}"
     z_input = f"z_input{branch}"
-    gain_fold = uncertainty["gain_fold"]
-    gain_low = gain_nM_per_rpu / gain_fold
-    gain_high = gain_nM_per_rpu * gain_fold
+    gain_low = gain_nM_per_rpu
+    gain_high = gain_nM_per_rpu
     return PolyhedralIoContract.from_dict(
         {
             "input_vars": [z_xi],
@@ -584,29 +553,23 @@ def create_finite_box_core_contract(
     candidate: Candidate,
     xi1_bounds: tuple[float, float],
     xi2_bounds: tuple[float, float],
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> PolyhedralIoContract:
-    """Create a globally valid QSS contract over one finite input box.
+    """Create a globally valid fixed-parameter QSS contract on one finite box.
 
     The lower bound follows from C >= input_1*input_2/(K+input_1+input_2).
     The three upper bounds use C <= input_1, C <= input_2, and
-    C <= input_1*input_2/K. Parameter uncertainty is included by using the
-    adverse endpoint in each inequality.
+    C <= input_1*input_2/K.
     """
 
     core = candidate.core
-    gain_fold = uncertainty["gain_fold"]
-    affinity_fold = uncertainty["affinity_fold"]
-    rate_fold = uncertainty["output_rate_fold"]
-
-    input_1_low = core.gain_1_nM_per_rpu / gain_fold * xi1_bounds[0]
-    input_1_high = core.gain_1_nM_per_rpu * gain_fold * xi1_bounds[1]
-    input_2_low = core.gain_2_nM_per_rpu / gain_fold * xi2_bounds[0]
-    input_2_high = core.gain_2_nM_per_rpu * gain_fold * xi2_bounds[1]
-    affinity_low = core.affinity_nM / affinity_fold
-    affinity_high = core.affinity_nM * affinity_fold
-    rate_low = core.output_rate_per_min / rate_fold
-    rate_high = core.output_rate_per_min * rate_fold
+    input_1_low = core.gain_1_nM_per_rpu * xi1_bounds[0]
+    input_1_high = core.gain_1_nM_per_rpu * xi1_bounds[1]
+    input_2_low = core.gain_2_nM_per_rpu * xi2_bounds[0]
+    input_2_high = core.gain_2_nM_per_rpu * xi2_bounds[1]
+    affinity_low = core.affinity_nM
+    affinity_high = core.affinity_nM
+    rate_low = core.output_rate_per_min
+    rate_high = core.output_rate_per_min
     denominator_high = affinity_high + input_1_high + input_2_high
     endpoint_lower = rate_low * float(
         complex_concentration(input_1_low, input_2_low, affinity_high)
@@ -615,9 +578,9 @@ def create_finite_box_core_contract(
         complex_concentration(input_1_high, input_2_high, affinity_low)
     )
 
-    # A small outward pad avoids numerical equality artifacts when Pacti
-    # eliminates the internal component-abundance variables.
-    assumption_pad = 1.001
+    # Assumption boundaries are closed polyhedral inequalities. Keep the exact
+    # shared boundaries so upstream gain guarantees and core assumptions meet
+    # at equality without introducing a modeling tolerance.
 
     return PolyhedralIoContract.from_dict(
         {
@@ -626,19 +589,19 @@ def create_finite_box_core_contract(
             "assumptions": [
                 {
                     "coefficients": {"z_input1": -1.0},
-                    "constant": -math.log(input_1_low / assumption_pad),
+                    "constant": -math.log(input_1_low),
                 },
                 {
                     "coefficients": {"z_input1": 1.0},
-                    "constant": math.log(input_1_high * assumption_pad),
+                    "constant": math.log(input_1_high),
                 },
                 {
                     "coefficients": {"z_input2": -1.0},
-                    "constant": -math.log(input_2_low / assumption_pad),
+                    "constant": -math.log(input_2_low),
                 },
                 {
                     "coefficients": {"z_input2": 1.0},
-                    "constant": math.log(input_2_high * assumption_pad),
+                    "constant": math.log(input_2_high),
                 },
             ],
             "guarantees": [
@@ -683,7 +646,6 @@ def create_redesigned_finite_box_core_contract(
     candidate: Candidate,
     xi1_bounds: tuple[float, float],
     xi2_bounds: tuple[float, float],
-    uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> PolyhedralIoContract:
     """Create a sound polyhedral outer contract for one redesigned mode.
 
@@ -695,16 +657,13 @@ def create_redesigned_finite_box_core_contract(
     """
 
     core = candidate.core
-    gain_fold = uncertainty["gain_fold"]
-    input_1_low = core.gain_1_nM_per_rpu / gain_fold * xi1_bounds[0]
-    input_1_high = core.gain_1_nM_per_rpu * gain_fold * xi1_bounds[1]
-    input_2_low = core.gain_2_nM_per_rpu / gain_fold * xi2_bounds[0]
-    input_2_high = core.gain_2_nM_per_rpu * gain_fold * xi2_bounds[1]
+    input_1_low = core.gain_1_nM_per_rpu * xi1_bounds[0]
+    input_1_high = core.gain_1_nM_per_rpu * xi1_bounds[1]
+    input_2_low = core.gain_2_nM_per_rpu * xi2_bounds[0]
+    input_2_high = core.gain_2_nM_per_rpu * xi2_bounds[1]
     endpoint_lower, endpoint_upper = redesigned_condition_flux_interval(
-        candidate, xi1_bounds, xi2_bounds, uncertainty
+        candidate, xi1_bounds, xi2_bounds
     )
-
-    assumption_pad = 1.001
     guarantees: list[dict[str, object]] = []
     if endpoint_lower > 0.0:
         guarantees.append(
@@ -727,19 +686,19 @@ def create_redesigned_finite_box_core_contract(
             "assumptions": [
                 {
                     "coefficients": {"z_input1": -1.0},
-                    "constant": -math.log(input_1_low / assumption_pad),
+                    "constant": -math.log(input_1_low),
                 },
                 {
                     "coefficients": {"z_input1": 1.0},
-                    "constant": math.log(input_1_high * assumption_pad),
+                    "constant": math.log(input_1_high),
                 },
                 {
                     "coefficients": {"z_input2": -1.0},
-                    "constant": -math.log(input_2_low / assumption_pad),
+                    "constant": -math.log(input_2_low),
                 },
                 {
                     "coefficients": {"z_input2": 1.0},
-                    "constant": math.log(input_2_high * assumption_pad),
+                    "constant": math.log(input_2_high),
                 },
             ],
             "guarantees": guarantees,
@@ -751,7 +710,6 @@ def compose_redesigned_candidate(
     candidate: Candidate,
     xi1_bounds: tuple[float, float],
     xi2_bounds: tuple[float, float],
-    uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> tuple[
     PolyhedralIoContract,
     PolyhedralIoContract,
@@ -762,13 +720,13 @@ def compose_redesigned_candidate(
 
     core = candidate.core
     c1 = create_expression_contract(
-        1, candidate.sensor_1, core.gain_1_nM_per_rpu, uncertainty
+        1, candidate.sensor_1, core.gain_1_nM_per_rpu
     )
     c2 = create_expression_contract(
-        2, candidate.sensor_2, core.gain_2_nM_per_rpu, uncertainty
+        2, candidate.sensor_2, core.gain_2_nM_per_rpu
     )
     c3 = create_redesigned_finite_box_core_contract(
-        candidate, xi1_bounds, xi2_bounds, uncertainty
+        candidate, xi1_bounds, xi2_bounds
     )
     c12 = c1.compose(c2, vars_to_keep=["z_input1", "z_input2"])
     cfull = c12.compose(c3, vars_to_keep=["z_flux"])
@@ -779,7 +737,6 @@ def compose_candidate(
     candidate: Candidate,
     xi1_bounds: tuple[float, float],
     xi2_bounds: tuple[float, float],
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> tuple[
     PolyhedralIoContract,
     PolyhedralIoContract,
@@ -790,13 +747,13 @@ def compose_candidate(
 
     core = candidate.core
     c1 = create_expression_contract(
-        1, candidate.sensor_1, core.gain_1_nM_per_rpu, uncertainty
+        1, candidate.sensor_1, core.gain_1_nM_per_rpu
     )
     c2 = create_expression_contract(
-        2, candidate.sensor_2, core.gain_2_nM_per_rpu, uncertainty
+        2, candidate.sensor_2, core.gain_2_nM_per_rpu
     )
     c3 = create_finite_box_core_contract(
-        candidate, xi1_bounds, xi2_bounds, uncertainty
+        candidate, xi1_bounds, xi2_bounds
     )
     c12 = c1.compose(c2, vars_to_keep=["z_input1", "z_input2"])
     cfull = c12.compose(c3, vars_to_keep=["z_flux"])
@@ -851,12 +808,11 @@ def create_specification(condition: Condition) -> PolyhedralIoContract:
 def verify_condition(
     candidate: Candidate,
     condition: Condition,
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> dict[str, object]:
     """Compose and check assumption coverage and conditional guarantees."""
 
     _, _, _, composed = compose_candidate(
-        candidate, condition.xi1_bounds, condition.xi2_bounds, uncertainty
+        candidate, condition.xi1_bounds, condition.xi2_bounds
     )
     specification = create_specification(condition)
     assumptions_ok = specification.a <= composed.a
@@ -876,12 +832,11 @@ def verify_condition(
 def verify_redesigned_condition(
     candidate: Candidate,
     condition: Condition,
-    uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> dict[str, object]:
     """Compose the redesigned core and check one fixed top-level mode."""
 
     _, _, _, composed = compose_redesigned_candidate(
-        candidate, condition.xi1_bounds, condition.xi2_bounds, uncertainty
+        candidate, condition.xi1_bounds, condition.xi2_bounds
     )
     specification = create_specification(condition)
     assumptions_ok = specification.a <= composed.a
@@ -916,7 +871,6 @@ def make_top_level_conditions(
 def summarize_candidate_envelopes(
     candidates: list[Candidate],
     conditions: list[Condition] | None = None,
-    uncertainty: dict[str, float] = DEFAULT_UNCERTAINTY,
 ) -> dict[str, object]:
     """Summarize worst-case candidate flux scales under the fixed design brief."""
 
@@ -938,13 +892,13 @@ def summarize_candidate_envelopes(
     off_ceilings: dict[str, float] = {}
     for core_name, candidate in representatives.items():
         on_floors[core_name] = condition_flux_interval(
-            candidate, on_condition.xi1_bounds, on_condition.xi2_bounds, uncertainty
+            candidate, on_condition.xi1_bounds, on_condition.xi2_bounds
         )[0]
         off_1 = condition_flux_interval(
-            candidate, off1_condition.xi1_bounds, off1_condition.xi2_bounds, uncertainty
+            candidate, off1_condition.xi1_bounds, off1_condition.xi2_bounds
         )[1]
         off_2 = condition_flux_interval(
-            candidate, off2_condition.xi1_bounds, off2_condition.xi2_bounds, uncertainty
+            candidate, off2_condition.xi1_bounds, off2_condition.xi2_bounds
         )[1]
         off_ceilings[core_name] = max(off_1, off_2)
 
@@ -959,9 +913,8 @@ def summarize_candidate_envelopes(
 def summarize_redesigned_envelopes(
     candidates: list[Candidate],
     conditions: list[Condition] | None = None,
-    uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> dict[str, object]:
-    """Summarize mechanism-specific redesign envelopes under the fixed brief."""
+    """Summarize mechanism-specific redesign envelopes under the fixed design brief."""
 
     if conditions is None:
         conditions = make_top_level_conditions()
@@ -981,13 +934,13 @@ def summarize_redesigned_envelopes(
     off_ceilings: dict[str, float] = {}
     for core_name, candidate in representatives.items():
         on_floors[core_name] = redesigned_condition_flux_interval(
-            candidate, on_condition.xi1_bounds, on_condition.xi2_bounds, uncertainty
+            candidate, on_condition.xi1_bounds, on_condition.xi2_bounds
         )[0]
         off_1 = redesigned_condition_flux_interval(
-            candidate, off1_condition.xi1_bounds, off1_condition.xi2_bounds, uncertainty
+            candidate, off1_condition.xi1_bounds, off1_condition.xi2_bounds
         )[1]
         off_2 = redesigned_condition_flux_interval(
-            candidate, off2_condition.xi1_bounds, off2_condition.xi2_bounds, uncertainty
+            candidate, off2_condition.xi1_bounds, off2_condition.xi2_bounds
         )[1]
         off_ceilings[core_name] = max(off_1, off_2)
 
