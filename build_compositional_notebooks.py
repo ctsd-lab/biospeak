@@ -67,6 +67,8 @@ import pandas as pd
 from compositional_regime_contracts import (
     CORES,
     DEFAULT_UNCERTAINTY,
+    DEFAULT_ON_THRESHOLD_NM_PER_MIN,
+    DEFAULT_OFF_THRESHOLD_NM_PER_MIN,
     MARIONETTE_SENSORS,
     REDESIGNS,
     REDESIGN_PARAMETERS,
