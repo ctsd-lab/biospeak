@@ -323,7 +323,7 @@ changes only a mechanism for which there is a literature basis:
    SYNZIP17 and SYNZIP18 to promote fragment complementation. The measured
    SYNZIP17:SYNZIP18 interaction has $K_d<10$ nM, so the redesign replaces
    the provisional 1200 nM affinity by the full conservative interval
-   $0<K\\le 10$ nM. The existing gain and output-rate ranges are left unchanged.
+   $0<K\le 10$ nM. The existing gain and output-rate ranges are left unchanged.
 3. **InvF/SicA + native SicA--SipC titration.** The mechanistic model of
    Temme *et al.* uses $K_{XY}=1700$ nM for InvF:SicA,
    $K_{YZ}=28$ nM for SicA:SipC, and approximately 6000--10000 SipC
