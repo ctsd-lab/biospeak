@@ -314,7 +314,7 @@ mechanism-specific design parameter(s). The contract calculation determines
 whether the resulting design satisfies all three modes.
 
 1. **HrpR/HrpS:** treat the HrpV inhibitory level as a tunable regulation
-   parameter. For the fixed specification, the feasible singleton-design
+   parameter. For the fixed specification, the feasible design
    interval is approximately $0.114$--$0.131\,\mu\mathrm{M}$; use
    $V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$.
 2. **split T7 RNAP:** use the effective fragment-association parameter as the
