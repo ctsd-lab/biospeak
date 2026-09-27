@@ -76,9 +76,9 @@ from compositional_regime_contracts import (
     infer_regime,
     make_candidate_designs,
     make_top_level_conditions,
-    parameter_range_flux_bounds,
+    initial_flux_bounds,
     redesigned_condition_flux_interval,
-    redesigned_parameter_range_flux_bounds,
+    redesigned_flux_bounds,
     sensor_activity,
     summarize_candidate_envelopes,
     summarize_redesigned_envelopes,
@@ -557,7 +557,7 @@ add_region(
 ax_assume.set_title(r"Input assumptions", fontweight="bold")
 
 for ax, (core_name, candidate) in zip(axes[1:], representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
+    lower, upper = initial_flux_bounds(candidate, XI1, XI2)
     ax.contourf(
         XI1, XI2, upper <= off1_condition.flux_threshold,
         levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.78
@@ -743,11 +743,11 @@ design_titles = {
 }
 
 for col, (core_name, candidate) in enumerate(representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1_flux, XI2_flux)
+    lower, upper = initial_flux_bounds(candidate, XI1_flux, XI2_flux)
     last_mesh = draw_flux_panel(
         axes[0, col], lower, upper, design_titles[core_name]
     )
-    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
+    lower_new, upper_new = redesigned_flux_bounds(
         candidate, XI1_flux, XI2_flux
     )
     last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new)
