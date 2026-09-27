@@ -66,21 +66,19 @@ import pandas as pd
 
 from compositional_regime_contracts import (
     CORES,
-    DEFAULT_UNCERTAINTY,
     DEFAULT_ON_THRESHOLD_NM_PER_MIN,
     DEFAULT_OFF_THRESHOLD_NM_PER_MIN,
     MARIONETTE_SENSORS,
     REDESIGNS,
     REDESIGN_PARAMETERS,
-    REDESIGN_UNCERTAINTY,
     complex_concentration,
     condition_flux_interval,
     infer_regime,
     make_candidate_designs,
     make_top_level_conditions,
-    parameter_range_flux_bounds,
+    initial_flux_bounds,
     redesigned_condition_flux_interval,
-    redesigned_parameter_range_flux_bounds,
+    redesigned_flux_bounds,
     sensor_activity,
     summarize_candidate_envelopes,
     summarize_redesigned_envelopes,
@@ -123,14 +121,11 @@ sensor_table
     ),
     markdown(
         r"""
-## Integration cores and provisional design ranges
+## Integration cores and initial design parameters
 
-The three architectures are literature-backed. The effective affinities,
-promoter-to-component gains, and output rates below are **provisional nominal
-values**, not measurements reported by those papers. They place all three
-architectures in a common coarse-grained unit system for this methodology
-example. The uncertainty factors are deliberately varied around the nominals;
-they will be replaced by measured ranges in a later parameterization pass.
+The three architectures use the effective affinities, promoter-to-component
+gains, and output rates below as the fixed parameter values defining the
+initial designs in the computational example.
 """
     ),
     code(
@@ -142,8 +137,8 @@ for core in CORES:
         "Input 1": core.component_1,
         "Input 2": core.component_2,
         "Output promoter": core.output_promoter,
-        "K nominal [nM]": core.affinity_nM,
-        "k_out nominal [1/min]": core.output_rate_per_min,
+        "K [nM]": core.affinity_nM,
+        "k_out [1/min]": core.output_rate_per_min,
         "g1 [nM/RPU]": core.gain_1_nM_per_rpu,
         "g2 [nM/RPU]": core.gain_2_nM_per_rpu,
         "center regime": core.nominal_regime,
@@ -151,12 +146,6 @@ for core in CORES:
 core_table = pd.DataFrame(core_rows)
 display(core_table)
 
-uncertainty_table = pd.DataFrame([
-    {"Parameter class": "lumped expression gains", "Range": f"nominal / {DEFAULT_UNCERTAINTY['gain_fold']} to nominal x {DEFAULT_UNCERTAINTY['gain_fold']}"},
-    {"Parameter class": "effective affinity", "Range": f"nominal / {DEFAULT_UNCERTAINTY['affinity_fold']} to nominal x {DEFAULT_UNCERTAINTY['affinity_fold']}"},
-    {"Parameter class": "output rate", "Range": f"nominal / {DEFAULT_UNCERTAINTY['output_rate_fold']} to nominal x {DEFAULT_UNCERTAINTY['output_rate_fold']}"},
-])
-display(uncertainty_table)
 """
     ),
     markdown(
@@ -189,14 +178,18 @@ design_table
         r"""
 ## Top-level AND-gate specification
 
-The desired AND behavior contains one ON region and two OFF regions:
+The desired AND behavior contains one ON region and two mixed OFF regions:
 \[
-(\xi_1,\xi_2)\in B_{\rm ON}\Longrightarrow y\ge y_{\rm ON},
+(\xi_1,\xi_2)\in H\times H\Longrightarrow y\ge y_{\rm ON},
 \]
 \[
-\xi_1\in B_{\rm OFF}\ \text{or}\ \xi_2\in B_{\rm OFF}
-\Longrightarrow y\le y_{\rm OFF}.
+(\xi_1,\xi_2)\in L\times H\Longrightarrow y\le y_{\rm OFF},
+\qquad
+(\xi_1,\xi_2)\in H\times L\Longrightarrow y\le y_{\rm OFF}.
 \]
+By the monotonicity result developed for the model class, the LOW--LOW case is
+already implied by either mixed OFF condition and is not introduced as a
+separate contract mode.
 The input regions are stated in promoter activity units. The ON region lies inside
 the experimentally useful Marionette RPU range. The OFF interval begins near
 the characterized leak floors and extends to 20% of the ON onset; the interval
@@ -235,15 +228,17 @@ display(condition_table)
         r"""
 ## Composition and formal checks
 
-For a finite operating region, the catalytic-core contract uses the globally valid
+For each finite operating region, the catalytic-core contract uses the globally valid
 bounds
 \[
 \frac{Y_1Y_2}{K+Y_1+Y_2}\le C_3
 \le\min\left\{Y_1,Y_2,\frac{Y_1Y_2}{K}\right\}.
 \]
-Monotonic endpoint bounds tighten this contract over each region. Parameter-range
-endpoints are incorporated before composing the two lumped expression
-contracts with the core contract. A design implements the complete AND
+Monotonic endpoint bounds tighten this contract over each region. The fixed
+design parameters are used when composing the two lumped expression contracts
+with the core contract. Upstream gain guarantees and downstream core
+assumptions use the same closed boundaries exactly; no numerical padding is
+introduced. A design implements the complete AND
 specification only if it refines the ON, OFF-1, and OFF-2 contracts.
 
 The top-level object is therefore the mode-indexed family
@@ -303,22 +298,23 @@ pd.DataFrame(interval_rows)
         r"""
 ### Initial design insight
 
-The broadened LOW range exposes a limitation that the leak-only specification
-hid: none of the three direct complex-formation cores satisfies the complete
-AND contract. HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF
-ceiling; split T7 RNAP also falls slightly below the ON target. The equality of
-each ordered pair after the RPU interface still shows what the abstraction
-provides; their required inducer concentrations remain different in the sensor
-contracts.
+At the fixed initial parameter values, none of the three cores satisfies all
+three modes. HrpR/HrpS satisfies the ON requirement but exceeds both OFF
+ceilings. Split T7 RNAP satisfies the ON requirement but exceeds both OFF
+ceilings. InvF/SicA satisfies the ON and OFF-1 requirements but exceeds the
+OFF-2 ceiling. The equality of each ordered sensor pair after the RPU interface
+still shows what the abstraction provides; their required inducer
+concentrations remain different in the sensor contracts.
 
 ## Contract-guided redesigns
 
-The fixed ON/OFF specification remains unchanged. The redesigned cases are
-evaluated as selected synthesis points, so the contract calculation determines
-whether each chosen parameter value satisfies all three modes.
+The fixed ON/OFF specification remains unchanged. Each initial design is
+evaluated at its stated parameter values, and each redesign updates the
+mechanism-specific design parameter(s). The contract calculation determines
+whether the resulting design satisfies all three modes.
 
 1. **HrpR/HrpS:** treat the HrpV inhibitory level as a tunable regulation
-   parameter. For the fixed specification, the feasible singleton-design
+   parameter. For the fixed specification, the feasible design
    interval is approximately $0.114$--$0.131\,\mu\mathrm{M}$; use
    $V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$.
 2. **split T7 RNAP:** use the effective fragment-association parameter as the
@@ -336,7 +332,7 @@ two redesigns and then run the same mode-wise refinement checks for all three.
     ),
     code(
         """
-# Contract-feasible singleton redesign windows for the two direct QSS cores.
+# Contract-feasible fixed-parameter redesign windows for the two direct QSS cores.
 representative_by_core = {}
 for candidate in candidates:
     representative_by_core.setdefault(candidate.core.name, candidate)
@@ -420,12 +416,6 @@ for core_name, redesign in REDESIGNS.items():
     })
 display(pd.DataFrame(redesign_rows))
 
-display(pd.DataFrame([{
-    "Redesign contract range": "singleton selected synthesis point",
-    "gain fold": REDESIGN_UNCERTAINTY["gain_fold"],
-    "affinity fold": REDESIGN_UNCERTAINTY["affinity_fold"],
-    "output-rate fold": REDESIGN_UNCERTAINTY["output_rate_fold"],
-}]))
 """
     ),
     code(
@@ -479,9 +469,9 @@ PLOT_CELLS = [
 All panels use the actual promoter activities $(\xi_1,\xi_2)$ in RPU on
 logarithmic axes; the coordinates are not divided by an operating point or by
 a kinetic constant. The first panel states the required environments and the
-common characterized sensor-admissible domain for all six designs.
+common characterized sensor-admissible domain for the three architectures under both sensor assignments.
 The other panels shade the input satisfaction sets for the ON and OFF contract
-guarantees over the stated parameter ranges. Curved shaded boundaries
+guarantees at the stated design parameter values. Curved shaded boundaries
 come from the full QSS binding relation rather than from artificial rectangular
 design regions.
 """
@@ -567,7 +557,7 @@ add_region(
 ax_assume.set_title(r"Input assumptions", fontweight="bold")
 
 for ax, (core_name, candidate) in zip(axes[1:], representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
+    lower, upper = initial_flux_bounds(candidate, XI1, XI2)
     ax.contourf(
         XI1, XI2, upper <= off1_condition.flux_threshold,
         levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.78
@@ -658,8 +648,8 @@ required output-flux inequality for that mode. They are sets in different
 spaces, so an assumption is not literally contained in a guarantee. The plot
 instead shades the projected input satisfaction set
 \[
-S_D^q=\{\xi:\ y_D(\xi;\theta)\text{ satisfies }G_q
-\text{ for every allowed }\theta\}.
+S_D^q=\{\xi:\ y_D(\xi;\theta_D)\text{ satisfies }G_q\},
+where $\theta_D$ denotes the fixed parameters of design $D$.
 \]
 A design passes mode $q$ when $A_q\subseteq S_D^q$ (every allowed input in
 that mode produces only outputs satisfying its output requirement). In the
@@ -677,7 +667,7 @@ top row to its mechanism-specific redesign in the bottom row. The outlined ON
 and OFF regions are the same fixed top-level requirement in every panel:
 $y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
 
-Color gives the worst-case lower output flux over the stated parameter ranges.
+Color gives the output flux at the stated design parameter values.
 Green and gray shading mark the ON and OFF contract satisfaction sets. Thick
 white contours show the two top-level contract guarantee boundaries: solid for
 ON and dashed for OFF.
@@ -753,11 +743,11 @@ design_titles = {
 }
 
 for col, (core_name, candidate) in enumerate(representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1_flux, XI2_flux)
+    lower, upper = initial_flux_bounds(candidate, XI1_flux, XI2_flux)
     last_mesh = draw_flux_panel(
         axes[0, col], lower, upper, design_titles[core_name]
     )
-    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
+    lower_new, upper_new = redesigned_flux_bounds(
         candidate, XI1_flux, XI2_flux
     )
     last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new)
@@ -774,7 +764,7 @@ fig.text(
 )
 cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.82, pad=0.025)
 cbar.solids.set_rasterized(False)
-cbar.set_label("worst-case lower output flux [nM/min]")
+cbar.set_label("output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
 
 legend = [
@@ -824,9 +814,8 @@ for design, update in redesign_notes.items():
 ## Interpretation
 
 - The outlined ON/OFF regions and output thresholds are identical in both rows.
-- The upper row shows the initial candidates with their provisional uncertainty
-  ranges.
-- The lower row shows the selected redesign synthesis points.
+- The upper row shows the three fixed initial designs.
+- The lower row shows the corresponding updated designs.
 - HrpV and split-T7 parameter values are chosen from the contract-feasible
   windows computed above; InvF/SicA uses the selected turnover/degradation
   parameters.
