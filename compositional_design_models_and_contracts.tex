@@ -373,6 +373,49 @@ The significance for contract construction is that a continuum of CRN
 behaviors over a finite region is replaced by finitely many extremal
 evaluations.
 
+\paragraph{A CRN-level sufficient condition for the monotonicity premise.}
+The remaining question is how to obtain the required monotonicity directly
+from a CRN model. Consider
+\[
+\dot x=f(x,u),\qquad y=h(x,u),
+\]
+and suppose that for every $u$ in the operating region there is a unique
+equilibrium $x^*(u)$ with nonsingular Jacobian
+\[
+J_x:=\frac{\partial f}{\partial x}(x^*(u),u).
+\]
+Assume throughout the region that $J_x$ is Hurwitz and Metzler and that
+\[
+J_u:=\frac{\partial f}{\partial u}(x^*(u),u)\ge0.
+\]
+Then $-J_x^{-1}\ge0$, and the implicit-function theorem gives
+\[
+\frac{\partial x^*}{\partial u}
+=
+-J_x^{-1}J_u
+\ge0.
+\]
+If in addition $h_x\ge0$ and $h_u\ge0$, then
+\[
+\frac{\partial y^*}{\partial u}
+=
+h_x\frac{\partial x^*}{\partial u}+h_u
+\ge0.
+\]
+Thus the equilibrium input-output map is coordinatewise nondecreasing.
+A signed-orthant version follows by applying diagonal signature matrices before
+the Metzler and sign tests.
+
+For a mass-action CRN, the Jacobian entries are sums and differences of
+mass-action monomials. This creates a direct connection to the regime and
+dominance-margin machinery developed earlier: regime assumptions can be used
+to certify a fixed sign for otherwise competing derivative terms. A useful
+next theorem is therefore a \emph{regime-to-monotonicity certificate}: give
+finite monomial-dominance inequalities under which the CRN Jacobian satisfies
+the sign conditions above throughout the regime. This would make monotonicity
+itself a structural consequence of the same CRN information already used to
+construct the polyhedral contract.
+
 \paragraph{Monotonicity tightening of a CRN regime contract.}
 Let $\mathcal C_R=(a_R,g_R)$ be a contract obtained from the CRN structure by
 the exponent-polytope or dominance-margin construction developed earlier in
