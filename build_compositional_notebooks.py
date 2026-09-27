@@ -469,7 +469,7 @@ PLOT_CELLS = [
 All panels use the actual promoter activities $(\xi_1,\xi_2)$ in RPU on
 logarithmic axes; the coordinates are not divided by an operating point or by
 a kinetic constant. The first panel states the required environments and the
-common characterized sensor-admissible domain for all six designs.
+common characterized sensor-admissible domain for the three architectures under both sensor assignments.
 The other panels shade the input satisfaction sets for the ON and OFF contract
 guarantees at the stated design parameter values. Curved shaded boundaries
 come from the full QSS binding relation rather than from artificial rectangular
