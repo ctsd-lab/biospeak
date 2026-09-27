@@ -1,4 +1,4 @@
-"""Contracts and parameter-range calculations for the compositional AND gate.
+"""Contracts and fixed-parameter calculations for the compositional AND gate.
 
 The external interface uses promoter activities ``xi_1`` and ``xi_2`` in
 relative promoter units (RPU). Two lumped expression modules produce the
