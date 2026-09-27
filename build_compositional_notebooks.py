@@ -59,6 +59,7 @@ from pathlib import Path
 os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib"))
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 import numpy as np
@@ -646,7 +647,7 @@ plt.show()
     ),
     markdown(
         r"""
-## What the heatmap shading means
+## What the contract contours mean
 
 For each mode $q\in\{\mathrm{ON},\mathrm{OFF\mbox{-}1},\mathrm{OFF\mbox{-}2\}$, the
 conditional specification is
@@ -655,17 +656,18 @@ conditional specification is
 \]
 Here $A_q$ is a set of allowed input promoter activities and $G_q$ is the
 required output-flux inequality for that mode. They are sets in different
-spaces, so an assumption is not literally contained in a guarantee. The plot
-instead shades the projected input satisfaction set
+spaces, so an assumption is not literally contained in a guarantee. Define the
+projected input satisfaction set
 \[
 S_D^q=\{\xi:\ y_D(\xi;\theta)\text{ satisfies }G_q
 \text{ for every allowed }\theta\}.
 \]
 A design passes mode $q$ when $A_q\subseteq S_D^q$ (every allowed input in
 that mode produces only outputs satisfying its output requirement). In the
-heatmap, the black outline is $A_{\rm ON}$ and the green shading is
-$S_D^{\rm ON}$; the white outlines are the two OFF assumptions and the gray
-shading is the common OFF contract satisfaction set.
+heatmap, the black outlines mark $A_{\rm ON}$ and the two OFF assumptions.
+Green and gray shading mark $S_D^{\rm ON}$ and the common OFF
+satisfaction set, respectively. The solid and dashed black contours mark their
+boundaries.
 """
     ),
     markdown(
@@ -678,9 +680,9 @@ and OFF regions are the same fixed top-level requirement in every panel:
 $y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
 
 Color gives the worst-case lower output flux over the stated parameter ranges.
-Green and gray shading mark the ON and OFF contract satisfaction sets. Thick
-white contours show the two top-level contract guarantee boundaries: solid for
-ON and dashed for OFF.
+Green and gray shading mark the ON and OFF contract satisfaction sets. The
+solid and dashed black contours show the top-level ON and OFF contract guarantee
+boundaries.
 """
     ),
     code(
@@ -695,11 +697,12 @@ xi_flux = np.geomspace(0.004, 8.0, 500)
 XI1_flux, XI2_flux = np.meshgrid(xi_flux, xi_flux)
 flux_limits = (xi_flux[0], xi_flux[-1])
 vmax = 300.0
+flux_cmap = ListedColormap(plt.get_cmap("Greys")(np.linspace(0.0, 0.5, 256)))
 
 def draw_flux_panel(ax, lower, upper, title=None):
     mesh = ax.pcolormesh(
         XI1_flux, XI2_flux, lower,
-        shading="auto", cmap="coolwarm", vmin=0, vmax=vmax,
+        shading="auto", cmap=flux_cmap, vmin=0, vmax=vmax,
     )
     off_mask = upper <= off1_condition.flux_threshold
     on_mask = lower >= on_condition.flux_threshold
@@ -716,23 +719,23 @@ def draw_flux_panel(ax, lower, upper, title=None):
     if np.nanmin(upper) <= off1_condition.flux_threshold <= np.nanmax(upper):
         ax.contour(
             XI1_flux, XI2_flux, upper,
-            levels=[off1_condition.flux_threshold], colors=["white"],
-            linewidths=4.0, linestyles="dashed", zorder=4,
+            levels=[off1_condition.flux_threshold], colors=["black"],
+            linewidths=2.5, linestyles="dashed", zorder=4,
         )
     if np.nanmin(lower) <= on_condition.flux_threshold <= np.nanmax(lower):
         ax.contour(
             XI1_flux, XI2_flux, lower,
-            levels=[on_condition.flux_threshold], colors=["white"],
-            linewidths=4.0, linestyles="solid", zorder=4,
+            levels=[on_condition.flux_threshold], colors=["black"],
+            linewidths=2.5, linestyles="solid", zorder=4,
         )
     add_region(
         ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
-        "none", "black", alpha=1.0, lw=3.0,
+        "none", "black", alpha=1.0, lw=2.0,
     )
     for condition in (off1_condition, off2_condition):
         add_region(
             ax, condition.xi1_bounds, condition.xi2_bounds,
-            "none", "white", alpha=1.0, lw=3.0,
+            "none", "black", alpha=1.0, lw=2.0,
         )
     if title:
         ax.set_title(title, fontsize=16, fontweight="bold")
@@ -762,36 +765,30 @@ for col, (core_name, candidate) in enumerate(representatives.items()):
     )
     last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new)
 
-fig.text(
-    0.018, 0.675, "Initial designs",
-    rotation=90, va="center", ha="center",
-    fontsize=16, fontweight="bold",
-)
-fig.text(
-    0.018, 0.305, "Mechanism-specific redesigns",
-    rotation=90, va="center", ha="center",
-    fontsize=16, fontweight="bold",
-)
 cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.82, pad=0.025)
 cbar.solids.set_rasterized(False)
 cbar.set_label("worst-case lower output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
 
+for row, label in enumerate(("Initial designs", "Mechanism-specific redesigns")):
+    position = axes[row, 0].get_position()
+    fig.text(
+        0.018, 0.5 * (position.y0 + position.y1), label,
+        rotation=90, va="center", ha="center",
+        fontsize=16, fontweight="bold",
+    )
+
 legend = [
-    Patch(facecolor="#79d18b", edgecolor="#79d18b", alpha=0.30,
-          label="ON contract satisfaction set"),
-    Patch(facecolor="#cfd5dd", edgecolor="#cfd5dd", alpha=0.42,
-          label="OFF contract satisfaction set"),
-    Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="solid",
-           label="ON guarantee boundary"),
-    Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="dashed",
-           label="OFF guarantee boundary"),
+    Line2D([0], [0], color="black", linewidth=2.5, linestyle="solid",
+           label=r"top-level ON contract guarantee ($y\geq120$ nM/min)"),
+    Line2D([0], [0], color="black", linewidth=2.5, linestyle="dashed",
+           label=r"top-level OFF contract guarantee ($y\leq60$ nM/min)"),
 ]
 fig.legend(
     handles=legend,
     loc="lower center",
     bbox_to_anchor=(0.49, 0.025),
-    ncol=4,
+    ncol=2,
     frameon=False,
 )
 
