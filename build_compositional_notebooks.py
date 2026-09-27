@@ -70,6 +70,7 @@ from compositional_regime_contracts import (
     MARIONETTE_SENSORS,
     REDESIGNS,
     REDESIGN_PARAMETERS,
+    REDESIGN_UNCERTAINTY,
     condition_flux_interval,
     infer_regime,
     make_candidate_designs,
@@ -300,38 +301,45 @@ pd.DataFrame(interval_rows)
 ### Initial design insight
 
 The broadened LOW range exposes a limitation that the leak-only specification
-hid: none of the three direct complex-formation cores guarantees the complete
-AND behavior. HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF
-ceiling; split T7 RNAP also falls slightly below the ON target. The equality of
-each ordered pair after the RPU interface still shows what the abstraction
-provides; their required inducer concentrations remain different in the sensor
-contracts.
+hid: none of the three initial cores guarantees the complete AND behavior.
+HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF ceiling; split
+T7 RNAP also falls slightly below the ON target.
 
-## Mechanism-specific redesigns from published biology
+## Literature-guided redesign synthesis points
 
-The fixed top-level specification above is now held unchanged. Each redesign
-changes only a mechanism for which there is a literature basis:
+The top-level ON/OFF specification is unchanged. The initial candidates above
+retain their broad provisional uncertainty ranges. The redesign stage below
+uses selected parameter points as singleton contracts so that the computational
+example can show the synthesis step explicitly. These selected redesign points
+would require a new uncertainty characterization before experimental use.
 
-1. **HrpR/HrpS + HrpV inhibition.** Jovanovic *et al.* directly assayed
-   HrpV inhibition of HrpRS, using 0.8 micromolar HrpRS and HrpV doses from
-   0.1 to 0.8 micromolar. The redesigned model therefore adds a constitutive
-   HrpV pool over that experimentally assayed range. In the absence of a
-   reported HrpV--HrpS dissociation constant, the implementation uses a
-   stoichiometric strong-inhibition abstraction: one HrpV unit can neutralize
-   one unit of productive HrpRS complex.
-2. **split T7 RNAP + SYNZIP17/18.** The residue-601 split was fused to
-   SYNZIP17 and SYNZIP18 to promote fragment complementation. The measured
-   SYNZIP17:SYNZIP18 interaction has $K_d<10$ nM, so the redesign replaces
-   the provisional 1200 nM affinity by the full conservative interval
-   $0<K\le 10$ nM. The existing gain and output-rate ranges are left unchanged.
-3. **InvF/SicA + native SicA--SipC titration.** The mechanistic model of
-   Temme *et al.* uses $K_{XY}=1700$ nM for InvF:SicA,
-   $K_{YZ}=28$ nM for SicA:SipC, and approximately 6000--10000 SipC
-   molecules/cell. We use those values directly. SicA first equilibrates with
-   the fixed SipC pool, then free SicA can form the active InvF:SicA complex.
+1. **HrpR/HrpS: tune the HrpV control level.** HrpV directly inhibits HrpRS.
+   Jovanovic *et al.* assayed HrpV from $0.1$ to $0.8\,\mu\mathrm{M}$, and
+   Wang *et al.* subsequently built a three-terminal HrpRS/HrpV amplifier in
+   which HrpV expression is continuously tunable through a separate
+   transcriptional control input. We therefore treat the HrpV level as a
+   design dial and use an effective level of $0.12\,\mu\mathrm{M}$.
+2. **split T7 RNAP: weaken fragment recruitment.** SYNZIP17/18 has
+   $K_d<10\,\mathrm{nM}$ and makes complementation strong even at low
+   fragment abundance. The SYNZIP literature also reports much weaker
+   interactions, including measured affinities of $268\,\mathrm{nM}$,
+   $327\,\mathrm{nM}$, and $34\,\mu\mathrm{M}$. We use
+   $K_d=2.5\,\mu\mathrm{M}$ as a computational target inside this
+   experimentally demonstrated weak-interaction regime. It is a design target,
+   not a reported measurement for a named pair.
+3. **InvF/SicA: replace the static SipC sink by turnover and secretion.**
+   Temme *et al.* report $K_{YZ}=28\,\mathrm{nM}$,
+   $\gamma_X=\gamma_{XY}=0.022\,\mathrm{min}^{-1}$,
+   $\gamma_Y=0.046\,\mathrm{min}^{-1}$,
+   $\gamma_Z=0.139\,\mathrm{min}^{-1}$,
+   $\gamma_{YZ}=0.022\,\mathrm{min}^{-1}$, and
+   $k_Z=0.1\,\mathrm{min}^{-1}$. Their SipC production parameter is
+   $\alpha_Z=90$ proteins/transcript with $k_0=1$ transcript/min. The reduced
+   redesign solves the corresponding steady-state SicA/SipC turnover balance
+   before forming the active InvF:SicA complex.
 
-These are forward evaluations of literature-motivated mechanism changes.
-Parameters are not searched or adjusted to force refinement.
+The redesign parameters are selected from, or placed inside ranges supported
+by, these published mechanisms. No top-level ON/OFF threshold is changed.
 """
     ),
     code(
@@ -343,10 +351,17 @@ for core_name, redesign in REDESIGNS.items():
         "Core": core_name,
         "Redesign": redesign.label,
         "Mechanism": redesign.mechanism,
-        "Literature parameters used": str(params),
+        "Selected redesign parameters": str(params),
         "Source": redesign.source,
     })
-pd.DataFrame(redesign_rows)
+display(pd.DataFrame(redesign_rows))
+
+display(pd.DataFrame([{
+    "Redesign contract range": "singleton selected synthesis point",
+    "gain fold": REDESIGN_UNCERTAINTY["gain_fold"],
+    "affinity fold": REDESIGN_UNCERTAINTY["affinity_fold"],
+    "output-rate fold": REDESIGN_UNCERTAINTY["output_rate_fold"],
+}]))
 """
     ),
     code(
@@ -400,7 +415,7 @@ PLOT_CELLS = [
 All panels use the actual promoter activities $(\xi_1,\xi_2)$ in RPU on
 logarithmic axes; the coordinates are not divided by an operating point or by
 a kinetic constant. The first panel states the required environments and the
-common characterized sensor-admissible domain for all six designs.
+fixed ON/OFF specification regions.
 The other panels shade where each biological core guarantees the ON floor or
 the OFF ceiling over the stated parameter ranges. Curved shaded boundaries
 come from the full QSS binding relation rather than from artificial rectangular
@@ -448,18 +463,6 @@ def add_region(ax, x_bounds, y_bounds, face, edge, label=None, alpha=0.45, lw=2.
     ax.add_patch(patch)
     return patch
 
-common_sensor_low = max(sensor.leak_rpu for sensor in MARIONETTE_SENSORS.values())
-common_sensor_high = min(sensor.linear_max_rpu for sensor in MARIONETTE_SENSORS.values())
-add_region(
-    ax_assume,
-    (common_sensor_low, common_sensor_high),
-    (common_sensor_low, common_sensor_high),
-    "#d9edf2",
-    "#39798a",
-    alpha=0.42,
-    lw=2.0,
-    zorder=1,
-)
 add_region(
     ax_assume,
     on_condition.xi1_bounds,
@@ -540,8 +543,6 @@ axes[0].set_xlim(0.004, 1.1)
 axes[0].set_ylim(0.004, 1.1)
 
 handles = [
-    Patch(facecolor="#d9edf2", edgecolor="#39798a", alpha=0.42,
-          label="common sensor-valid domain"),
     Patch(facecolor="#b8dfc2", edgecolor="#24733b", alpha=0.72,
           label="specified ON environment"),
     Patch(facecolor="#d9dde2", edgecolor="#59636e", alpha=0.45,
@@ -591,18 +592,21 @@ shading is the common set where the OFF ceiling is guaranteed.
     ),
     markdown(
         r"""
-## Initial designs and mechanism-specific redesigns
+## Initial designs and literature-guided redesigns
 
 Each column follows one biological architecture from its initial design in the
-top row to its literature-grounded redesign in the bottom row. The outlined ON
-and OFF regions are the same fixed top-level requirement in every panel:
-$y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
-The arrow between rows states the mechanism change used for that architecture.
+top row to its selected redesign synthesis point in the bottom row. The
+outlined ON and OFF regions are the same fixed top-level requirement in every
+panel: $y\ge120\,\mathrm{nM/min}$ in the ON region and
+$y\le60\,\mathrm{nM/min}$ in either OFF region. The arrow between rows states
+the mechanism or parameter change used for that architecture.
 
-Color gives the worst-case lower output flux over the stated parameter ranges.
-Green shading marks inputs where the ON floor is guaranteed, and gray shading
-marks inputs where the OFF ceiling is guaranteed. Thick white contours show
-the two output thresholds: solid for ON and dashed for OFF.
+The top row retains the original provisional parameter uncertainty. The bottom
+row evaluates the selected redesign parameter point as a singleton contract.
+Color gives the lower output flux for the applicable parameter set. Green
+shading marks inputs where the ON floor is guaranteed, and gray shading marks
+inputs where the OFF ceiling is guaranteed. Thick white contours show the two
+output thresholds: solid for ON and dashed for OFF.
 """
     ),
     code(
@@ -613,92 +617,172 @@ fig.subplots_adjust(
     wspace=0.28, hspace=0.62,
 )
 
+# Wider plotting domain so that the redesigned mechanisms can be seen
+# beyond the fixed top-level specification region.
+xi_flux = np.geomspace(0.004, 8.0, 500)
+XI1_flux, XI2_flux = np.meshgrid(xi_flux, xi_flux)
+
+# Keep the color scale focused on the contract-relevant flux range.
+vmax = 300.0
 last_mesh = None
-vmax = max(
-    max(envelope_summary["on_floors"].values()),
-    max(redesigned_envelope_summary["on_floors"].values()),
-) * 1.8
+
+flux_xlim = (0.004, xi_flux[-1])
+flux_ylim = flux_xlim
+
 
 def draw_flux_panel(ax, lower, upper, title):
-    global last_mesh
     mesh = ax.pcolormesh(
-        XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0, vmax=vmax,
+        XI1_flux, XI2_flux, lower,
+        shading="auto",
+        cmap="viridis",
+        vmin=0,
+        vmax=vmax,
     )
-    ax.contourf(
-        XI1, XI2, upper <= off1_condition.flux_threshold,
-        levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.42
-    )
-    ax.contourf(
-        XI1, XI2, lower >= on_condition.flux_threshold,
-        levels=[0.5, 1.5], colors=["#79d18b"], alpha=0.30
-    )
-    if np.nanmin(upper) <= off1_condition.flux_threshold <= np.nanmax(upper):
-        ax.contour(
-            XI1, XI2, upper,
-            levels=[off1_condition.flux_threshold], colors=["white"],
-            linewidths=4.0, linestyles="dashed", zorder=4,
+
+    off_mask = upper <= off1_condition.flux_threshold
+    on_mask = lower >= on_condition.flux_threshold
+
+    if np.any(off_mask):
+        ax.contourf(
+            XI1_flux, XI2_flux, off_mask,
+            levels=[0.5, 1.5],
+            colors=["#cfd5dd"],
+            alpha=0.42,
         )
-    if np.nanmin(lower) <= on_condition.flux_threshold <= np.nanmax(lower):
-        ax.contour(
-            XI1, XI2, lower,
-            levels=[on_condition.flux_threshold], colors=["white"],
-            linewidths=4.0, linestyles="solid", zorder=4,
+
+    if np.any(on_mask):
+        ax.contourf(
+            XI1_flux, XI2_flux, on_mask,
+            levels=[0.5, 1.5],
+            colors=["#79d18b"],
+            alpha=0.30,
         )
+
+    if (
+        np.nanmin(upper)
+        <= off1_condition.flux_threshold
+        <= np.nanmax(upper)
+    ):
+        ax.contour(
+            XI1_flux, XI2_flux, upper,
+            levels=[off1_condition.flux_threshold],
+            colors=["white"],
+            linewidths=4.0,
+            linestyles="dashed",
+            zorder=4,
+        )
+
+    if (
+        np.nanmin(lower)
+        <= on_condition.flux_threshold
+        <= np.nanmax(lower)
+    ):
+        ax.contour(
+            XI1_flux, XI2_flux, lower,
+            levels=[on_condition.flux_threshold],
+            colors=["white"],
+            linewidths=4.0,
+            linestyles="solid",
+            zorder=4,
+        )
+
+    # Fixed top-level specification regions.
     add_region(
-        ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
-        "none", "#79d18b", alpha=1.0, lw=2.2
+        ax,
+        on_condition.xi1_bounds,
+        on_condition.xi2_bounds,
+        "none",
+        "#79d18b",
+        alpha=1.0,
+        lw=2.2,
     )
     add_region(
-        ax, off1_condition.xi1_bounds, off1_condition.xi2_bounds,
-        "none", "#d9dde2", alpha=1.0, lw=1.4
+        ax,
+        off1_condition.xi1_bounds,
+        off1_condition.xi2_bounds,
+        "none",
+        "#d9dde2",
+        alpha=1.0,
+        lw=1.4,
     )
     add_region(
-        ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
-        "none", "#d9dde2", alpha=1.0, lw=1.4
+        ax,
+        off2_condition.xi1_bounds,
+        off2_condition.xi2_bounds,
+        "none",
+        "#d9dde2",
+        alpha=1.0,
+        lw=1.4,
     )
+
     ax.set_title(title, fontsize=16, fontweight="bold")
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlim(0.004, 0.75)
-    ax.set_ylim(0.004, 0.75)
+    ax.set_xlim(*flux_xlim)
+    ax.set_ylim(*flux_ylim)
     ax.set_xlabel(r"$\xi_1$ [RPU]")
     ax.set_ylabel(r"$\xi_2$ [RPU]")
     ax.grid(which="both", alpha=0.12)
     ax.tick_params(axis="both", which="both", labelsize=16)
+
     return mesh
 
-for col, (core_name, candidate) in enumerate(representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
-    last_mesh = draw_flux_panel(axes[0, col], lower, upper, core_name)
 
-    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
-        candidate, XI1, XI2
+for col, (core_name, candidate) in enumerate(representatives.items()):
+
+    # Initial design
+    lower, upper = parameter_range_flux_bounds(
+        candidate,
+        XI1_flux,
+        XI2_flux,
     )
-    last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new, core_name)
+    last_mesh = draw_flux_panel(
+        axes[0, col],
+        lower,
+        upper,
+        core_name,
+    )
+
+    # Mechanism-specific redesign
+    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
+        candidate,
+        XI1_flux,
+        XI2_flux,
+    )
+    last_mesh = draw_flux_panel(
+        axes[1, col],
+        lower_new,
+        upper_new,
+        core_name,
+    )
+
 
 redesign_caption = {
     "HrpR/HrpS": (
-        r"add HrpV inhibition" + "\n" +
-        r"$0.1$--$0.8\,\mu\mathrm{M}$ HrpV"
+        r"tune HrpV control" + "\n"
+        r"$V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$"
     ),
     "split T7 RNAP": (
-        r"add SYNZIP17/18" + "\n" +
-        r"$K_d<10\,\mathrm{nM}$"
+        r"weaken zipper recruitment" + "\n"
+        r"target $K_d=2.5\,\mu\mathrm{M}$"
     ),
     "InvF/SicA": (
-        r"add SicA--SipC titration" + "\n" +
-        r"$K_{YZ}=28\,\mathrm{nM}$; 6000--10000 SipC/cell"
+        r"add SipC turnover/secretion" + "\n"
+        r"$k_Z=0.1\,\mathrm{min}^{-1}$ + published degradation rates"
     ),
 }
 
-# Draw one explicit design-change arrow per column.
+
 fig.canvas.draw()
+
 for col, core_name in enumerate(representatives):
     top_box = axes[0, col].get_position()
     bottom_box = axes[1, col].get_position()
+
     x_mid = 0.5 * (top_box.x0 + top_box.x1)
     y_start = top_box.y0 - 0.012
     y_end = bottom_box.y1 + 0.012
+
     arrow = FancyArrowPatch(
         (x_mid, y_start),
         (x_mid, y_end),
@@ -709,6 +793,7 @@ for col, core_name in enumerate(representatives):
         clip_on=False,
     )
     fig.add_artist(arrow)
+
     fig.text(
         x_mid,
         0.5 * (y_start + y_end),
@@ -716,61 +801,122 @@ for col, core_name in enumerate(representatives):
         ha="center",
         va="center",
         fontsize=12,
-        bbox={"facecolor": "white", "edgecolor": "none", "pad": 1.5},
+        bbox={
+            "facecolor": "white",
+            "edgecolor": "none",
+            "pad": 1.5,
+        },
     )
 
+
 fig.text(
-    0.018, 0.675, "Initial designs",
-    rotation=90, va="center", ha="center",
-    fontsize=16, fontweight="bold",
+    0.018,
+    0.675,
+    "Initial",
+    rotation=90,
+    va="center",
+    ha="center",
+    fontsize=16,
+    fontweight="bold",
 )
+
 fig.text(
-    0.018, 0.305, "Mechanism-specific redesigns",
-    rotation=90, va="center", ha="center",
-    fontsize=16, fontweight="bold",
+    0.018,
+    0.305,
+    "Redesigned",
+    rotation=90,
+    va="center",
+    ha="center",
+    fontsize=16,
+    fontweight="bold",
 )
+
 fig.suptitle(
     "Fixed AND requirement across initial and redesigned architectures",
     fontsize=16,
     fontweight="bold",
 )
+
 fig.text(
-    0.5, 0.91,
-    r"ON: $y\ge 120\,\mathrm{nM/min}$; OFF: $y\le 60\,\mathrm{nM/min}$",
+    0.5,
+    0.91,
+    r"ON: $y\ge 120\,\mathrm{nM/min}$; "
+    r"OFF: $y\le 60\,\mathrm{nM/min}$",
     ha="center",
     va="center",
     fontsize=14,
 )
 
-cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.82, pad=0.025)
+
+cbar = fig.colorbar(
+    last_mesh,
+    ax=axes.ravel().tolist(),
+    shrink=0.82,
+    pad=0.025,
+)
 cbar.set_label("worst-case lower output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
 
+
 legend = [
-    Patch(facecolor="#79d18b", edgecolor="#79d18b", alpha=0.30,
-          label="guaranteed ON output"),
-    Patch(facecolor="#cfd5dd", edgecolor="#cfd5dd", alpha=0.42,
-          label="guaranteed OFF output"),
-    Patch(facecolor="none", edgecolor="#79d18b",
-          label="specified ON environment"),
-    Patch(facecolor="none", edgecolor="#777777",
-          label="specified OFF environments"),
-    Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="solid",
-           label="ON threshold"),
-    Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="dashed",
-           label="OFF threshold"),
+    Patch(
+        facecolor="#79d18b",
+        edgecolor="#79d18b",
+        alpha=0.30,
+        label="guaranteed ON output",
+    ),
+    Patch(
+        facecolor="#cfd5dd",
+        edgecolor="#cfd5dd",
+        alpha=0.42,
+        label="guaranteed OFF output",
+    ),
+    Patch(
+        facecolor="none",
+        edgecolor="#79d18b",
+        label="specified ON environment",
+    ),
+    Patch(
+        facecolor="none",
+        edgecolor="#777777",
+        label="specified OFF environments",
+    ),
+    Line2D(
+        [0], [0],
+        color="#444444",
+        linewidth=4.0,
+        linestyle="solid",
+        label="ON threshold",
+    ),
+    Line2D(
+        [0], [0],
+        color="#444444",
+        linewidth=4.0,
+        linestyle="dashed",
+        label="OFF threshold",
+    ),
 ]
+
 fig.legend(
     handles=legend,
     loc="lower center",
-    bbox_to_anchor=(0.49, 0.035),
-    ncol=3,
+    bbox_to_anchor=(0.49, 0.025),
+    ncol=4,
     frameon=False,
 )
 
+
 output_base = Path("compositional_design_flux_maps")
-fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
-fig.savefig(output_base.with_suffix(".pdf"), bbox_inches="tight")
+fig.savefig(
+    output_base.with_suffix(".png"),
+    dpi=230,
+    bbox_inches="tight",
+)
+fig.savefig(
+    output_base.with_suffix(".pdf"),
+    bbox_inches="tight",
+)
+
 plt.show()
 """
     ),
@@ -778,21 +924,14 @@ plt.show()
         r"""
 ## Interpretation
 
-- The desired assumptions are finite ON/OFF regions, not a single operating
-  point.
-- The desired guarantee has physical meaning: a minimum transcription flux in
-  the ON region and a maximum leak flux in either OFF region.
-- Curved design boundaries are induced by the QSS complex relation and
-  parameter ranges. They are not manually drawn rectangles.
-- Ordered Marionette sensor assignments differ before the RPU interface but
-  deliberately share downstream verification results. This is the reusable
-  abstraction that enables later combinatorial exploration.
-- The upper row shows the unchanged initial designs; the lower row shows the
-  approved mechanism-specific redesigns under the same fixed requirement.
-- The arrow between each pair of panels states the single mechanism change
-  introduced for that architecture.
-- Redesigned candidates are reported as passes or failures directly. No
-  redesign parameter is adjusted after seeing the refinement result.
+- The desired assumptions are finite ON/OFF regions.
+- The top-level ON and OFF thresholds are unchanged between rows.
+- Curved design boundaries are induced by the mechanism equations.
+- The upper row shows the initial candidates with their provisional uncertainty
+  ranges.
+- The lower row shows the selected literature-guided redesign synthesis points.
+- The arrow between each pair of panels states the mechanism or parameter
+  change introduced for that architecture.
 """
     ),
 ]
