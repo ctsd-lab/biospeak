@@ -1,0 +1,389 @@
+% Working technical note for the compositional AND-gate case study.
+% Kept separate from the paper source for model/theory review.
+
+\section{Compositional AND-gate models and contract construction}
+\label{sec:and_gate_model_notes}
+
+\subsection{Top-level specification and monotonicity}
+
+Let
+\[
+L=[0.0055,0.07],\qquad H=[0.35,0.65]
+\]
+denote LOW and HIGH promoter-activity intervals in RPU. The current top-level
+specification is
+\begin{align}
+(\xi_1,\xi_2)\in H\times H &\Longrightarrow y\ge 120~{\rm nM/min},\\
+(\xi_1,\xi_2)\in L\times H &\Longrightarrow y\le 60~{\rm nM/min},\\
+(\xi_1,\xi_2)\in H\times L &\Longrightarrow y\le 60~{\rm nM/min}.
+\end{align}
+A separate LOW--LOW mode is unnecessary once coordinatewise monotonicity is
+established. If
+\[
+\xi_1\le\xi_1',\quad \xi_2\le\xi_2'
+\Longrightarrow
+y(\xi_1,\xi_2)\le y(\xi_1',\xi_2'),
+\]
+then for any $(\xi_1,\xi_2)\in L\times L$ and any
+$\widehat\xi_2\in H$,
+\[
+y(\xi_1,\xi_2)\le y(\xi_1,\widehat\xi_2)\le 60.
+\]
+Thus the LOW--LOW truth-table condition follows from the LOW--HIGH OFF
+contract. The same argument follows from HIGH--LOW. The transition interval
+$0.07<\xi_i<0.35$ remains unspecified.
+
+\subsection{Lumped expression modules and the common complex model}
+
+The implementation uses
+\[
+Y_{i,\rm tot}=g_i\xi_i.
+\]
+A minimal ODE realization is
+\[
+\dot Y_{i,\rm tot}=\alpha_i\xi_i-\delta_iY_{i,\rm tot},
+\qquad
+g_i=\frac{\alpha_i}{\delta_i},
+\]
+whose constant-input steady state gives the implemented gain relation.
+
+For the initial designs, the two expressed partners form an active complex:
+\begin{align}
+\dot C&=k_f(Y_{1,\rm tot}-C)(Y_{2,\rm tot}-C)-k_rC,\\
+\dot P&=k_{\rm out}C,\qquad y:=\dot P.
+\end{align}
+At quasi-steady binding,
+\[
+KC=(Y_{1,\rm tot}-C)(Y_{2,\rm tot}-C),
+\qquad K=\frac{k_r}{k_f},
+\]
+and
+\[
+\frac{Y_{1,\rm tot}Y_{2,\rm tot}}{K+Y_{1,\rm tot}+Y_{2,\rm tot}}
+\le C\le
+\min\left\{Y_{1,\rm tot},Y_{2,\rm tot},
+\frac{Y_{1,\rm tot}Y_{2,\rm tot}}{K}\right\}.
+\]
+The direct core is increasing in both component abundances:
+\[
+\frac{\partial C}{\partial Y_1}
+=
+\frac{Y_2-C}{K+Y_1+Y_2-2C}>0,\qquad
+\frac{\partial C}{\partial Y_2}
+=
+\frac{Y_1-C}{K+Y_1+Y_2-2C}>0,
+\]
+and decreasing in $K$:
+\[
+\frac{\partial C}{\partial K}
+=
+-\frac{C}{K+Y_1+Y_2-2C}<0.
+\]
+These properties justify the corner evaluations used in the current
+finite-region calculations.
+
+\subsection{Design 1: HrpR/HrpS with tunable HrpV inhibition}
+
+The initial effective parameters are
+\[
+K=250~{\rm nM},\quad k_{\rm out}=1.2~{\rm min}^{-1},\quad
+g_1=4000~{\rm nM/RPU},\quad g_2=800~{\rm nM/RPU}.
+\]
+The redesigned computation uses
+\[
+C_{\rm act}=[C-V_{\rm eff}]_+,\qquad
+y=k_{\rm out}C_{\rm act},
+\]
+where $V_{\rm eff}$ is the tunable HrpV regulation level.
+
+A compatible ODE realization introduces an inhibited complex $I$:
+\begin{align}
+\dot Q&=k_f(R_{\rm tot}-Q)(S_{\rm tot}-Q)-k_rQ,\\
+\dot I&=k_v^+(Q-I)(V_{\rm tot}-I)-k_v^-I,\\
+\dot P&=k^ý\rm out}(Q-I).
+\end{align}
+In the fast, strong-inhibition limit,
+\[
+Q-I\approx[Q-V_{\rm tot}]_+,
+\]
+which recovers the effective model implemented in the code. Since the direct
+complex $C$ is increasing in both inputs and the positive-part map is
+nondecreasing, the HrpV redesign is coordinatewise nondecreasing.
+
+Contract satisfaction gives
+\[
+V_{\rm eff}\ge
+\max\left\{
+C_{\rm OFF,1}-\frac{y_{\rm off}}{k^ý\rm out}},
+C_{\rm OFF,2}-\frac{y_{\rm off}}{k_{\rm out}},0
+\right\},
+\]
+and
+\[
+V_{\rm eff}\le
+C_{\rm ON}-\frac{y_{\rm on}}{k^ý\rm out}}.
+\]
+The current computation gives approximately
+\[
+114.4~{\rm nM}\le V_{\rm eff}\le130.7~{\rm nM},
+\]
+and uses $V_{\rm eff}=120~{\rm nM}$.
+
+\subsection{Design 2: split T7 RNA polymerase}
+
+The initial effective parameters are
+\[
+K=1200~{\rm nM},\quad k_{\rm out}=10~{\rm min}^{-1},\quad
+g_1=500~{\rm nM/RPU},\quad g_2=700~{\rm nM/RPU}.
+\]
+The redesign retains the same ODE/QSS structure and uses the effective
+fragment-association parameter $K$ as the design variable. For a required
+complex level $C^\star$,
+\[
+K=\frac{(Y_1-C^\star)(Y_2-C^\star)}{C^\star}.
+\]
+The ON requirement gives an upper bound on $K$ and the OFF requirements give
+lower bounds. The current fixed-parameter calculation gives
+\[
+2.286~\mu{\rm M}\lesssim K\lesssim3.165~\mu{\rm M},
+\]
+and uses $K=3.0~\mu{\rm M}$.
+
+\subsection{Design 3: InvF/SicA with SicA--SipC turnover}
+
+The initial effective parameters are
+\[
+K^ýXY}=250~{\rm nM},\quad k_{\rm out}=1~{\rm min}^{-1},\quad
+g_1=800~{\rm nM/RPU},\quad g_2=4000~{\rm nM/RPU}.
+\]
+The initial design uses the direct complex model above.
+
+For the redesigned model, let $X$ be free InvF, $Y$ free SicA, $Z$ free
+SipC, $C_{XY}$ the active InvF:SicA complex, and $C_{YZ}$ the SicA:SipC
+complex. A full ODE realization consistent with the reduced steady-state
+calculation is
+\begin{align}
+\dot X&=p_X-\gamma_XX-k_{XY}^+XY+k^ýXY}^-C_{XY},\\
+\dot Y&=p_Y-\gamma_YY-k_{XY}^+XY+k^ýXY}^-C_{XY}
+-k_{YZ}^+YZ+(k_{YZ}^-+k_Z)C_{YZ},\\
+\dot Z&=p_Z-\gamma_ZZ-k_{YZ}^+YZ+k^ýYZ}^-C_{YZ},\\
+\dot C_{XY}&=k_{XY}^+XY-k^ýXY}^-C_{XY}-\gamma_{XY}C_{XY},\\
+\dot C_{YZ}&=k_{YZ}^+YZ-k^ýYZ}^-C_{YZ}
+-(\gamma_{YZ}+k_Z)C_{YZ},\\
+\dot P&=k^ý\rm out}C_{XY}.
+\end{align}
+The $k_ZC_{YZ}$ term releases SicA while removing the SipC partner.
+
+The implemented computation uses the fast-binding relations
+\[
+C_{XY}=\frac{XY}{K^ýXY}},\qquad
+C_{YZ}=\frac{YZ}{K_{YZ}},
+\]
+and steady-state balances
+\begin{align}
+p_X&=\gamma_XX+\gamma_{XY}C_{XY},\\
+p_Y&=\gamma_YY+\gamma_{XY}C_{XY}+\gamma_{YZ}C_{YZ},\\
+p_Z&=\gamma_ZZ+(\gamma_{YZ}+k_Z)C_{YZ}.
+\end{align}
+The input-dependent production terms are
+\[
+p_X=\gamma_Xg_1\xi_1,\qquad
+p_Y=\gamma_Yg_2\xi_2.
+\]
+The parameters used in the current code are
+\[
+K_{YZ}=28~{\rm nM},\quad
+\gamma_X=\gamma_{XY}=0.022~{\rm min}^{-1},\quad
+\gamma_Y=0.046~{\rm min}^{-1},
+\]
+\[
+\gamma_Z=0.139~{\rm min}^{-1},\quad
+\gamma_{YZ}=0.022~{\rm min}^{-1},\quad
+k_Z=0.1~{\rm min}^{-1},
+\]
+together with the existing effective $K_{XY}=250~{\rm nM}$ and
+$k_{\rm out}=1~{\rm min}^{-1}$.
+
+\paragraph{Monotonicity of the reduced InvF/SicA model.}
+Define
+\[
+h(Y)=\frac{Y}{K^ýXY}\gamma_X+\gamma_{XY}Y},\qquad
+q(Y)=\frac{Y}{K_{YZ}\gamma_Z+(\gamma_{YZ}+k_Z)Y}.
+\]
+Then
+\[
+C_{XY}=p_Xh(Y),\qquad C_{YZ}=p_Zq(Y),
+\]
+and the SicA balance is
+\[
+R(Y;p_X,p_Y)
+=
+\gamma_YY+\gamma_{XY}p_Xh(Y)
++\gamma_{YZ}p_Zq(Y)-p_Y=0.
+\]
+Since $h'(Y)>0$ and $q'(Y)>0$,
+\[
+R_Y=
+\gamma_Y+\gamma_{XY}p_Xh'(Y)+\gamma_{YZ}p_Zq'(Y)>0.
+\]
+Hence the reduced steady state is unique and
+\[
+\frac{\partial Y^*}{\partial p_Y}=\frac{1}{R_Y}>0,\qquad
+\frac{\partial Y^*}{\partial p_X}
+=-\frac{\gamma_{XY}h(Y^*)}{R_Y}<0.
+\]
+The active complex satisfies
+\[
+\frac{\partial C_{XY}^*}{\partial p_Y}
+=
+\frac{p_Xh'(Y^*)}{R_Y}>0,
+\]
+and
+\[
+\frac{\partial C_{XY}^*}{\partial p_X}
+=
+h(Y^*)
+\frac{\gamma_Y+\gamma_{YZ}p_Zq'(Y^*)}{R_Y}>0.
+\]
+Thus the reduced redesigned output is coordinatewise nondecreasing in
+$(\xi_1,\xi_2)$, which justifies its corner-based mode certification.
+
+\subsection{Finite-box contract generation}
+
+The current code constructs a local core contract for each top-level input
+region. This can be formalized as a contract abstraction operator
+\[
+\mathfrak C^ý\Sigma}(B,\Theta),
+\]
+where $\Sigma$ is the subsystem, $B=[\underline\xi,\overline\xi]$ is a finite
+input box, and $\Theta$ is the parameter set used for verification.
+
+For a coordinatewise monotone input-output map,
+\[
+y_{\min}(B,\theta)=y(\underline\xi,\theta),\qquad
+y_{\max}(B,\theta)=y(\overline\xi,\theta).
+\]
+If parameter monotonicity is known, adverse parameter endpoints can be selected
+in the same way:
+\[
+\underline y(B,\Theta)
+=
+\inf_{\theta\in\Theta}y(\underline\xi,\theta),\qquad
+\overline y(B,\Theta)
+=
+\sup_{\theta\in\Theta}y(\overline\xi,\theta).
+\]
+These extrema give a sound local contract over $B$. For the direct QSS core,
+the structural inequalities on $C$ provide additional affine log-coordinate
+guarantees.
+
+The implementation therefore generates
+\[
+\mathfrak C_{\Sigma_3}(B_{\rm ON},\Theta),\quad
+\mathfrak C_{\Sigma_3}(B_{\rm OFF,1},\Theta),\quad
+\mathfrak C_{\Sigma_3}(B_{\rm OFF,2},\Theta).
+\]
+This is one biochemical subsystem with three local abstractions. An alternative
+would be one core contract over a larger box containing all three environments;
+that contract would generally be looser.
+
+\subsection{Fixed-parameter redesign verification}
+
+The initial designs use provisional multiplicative parameter ranges
+\[
+f_g=1.25,\qquad f_K=1.30,\qquad f_r=1.25.
+\]
+The redesigned calculations currently set those factors to one and evaluate
+the selected redesign parameters at fixed values.
+
+The interpretation is: for each redesigned architecture, the contract is
+verified for every input in the specified ON or OFF input region at the
+selected parameter values. The input contract still covers a continuum of
+promoter activities. Only the parameter set is a single selected design point.
+This is sufficient for the current contract-guided parameter-synthesis
+question. Parameter robustness is a separate question and is not required for
+the present claim.
+
+The phrase ``singleton contract'' should therefore be avoided. ``Fixed-parameter
+verification'' or ``verification at the selected synthesis point'' describes
+the calculation more accurately.
+
+\subsection{Zero output and the logarithmic epsilon floor}
+
+The HrpV effective model can produce exactly zero. Since the implementation
+uses $z_y=\log y$, zero has no finite log-coordinate representation. The code
+therefore uses
+\[
+\varepsilon_y=10^{-12}~{\rm nM/min}
+\]
+only when a zero upper bound must be represented in log coordinates. Thus an
+exact physical-model statement $y=0$ is encoded computationally as
+\[
+y\le\varepsilon_y.
+\]
+This is a numerical representation floor. It is not a biological leak model
+and is not an additional physical parameter.
+
+\subsection{Numerical assumption padding}
+
+The current implementation expands the local core assumption interval by the
+factor $1.001$. The code comment states that this was introduced to avoid
+numerical equality artifacts when Pacti eliminates internal
+component-abundance variables. In exact contract arithmetic, equality of an
+upstream guarantee boundary and a downstream assumption boundary is admissible.
+
+An outward pad is formally problematic if the core output bounds are derived
+on the original interval and then asserted over the larger padded interval.
+The preferred implementation is therefore either
+\begin{enumerate}
+\item use the exact physical assumption bounds if Pacti handles the shared
+boundaries reliably; or
+\item if a numerical margin is necessary, define it explicitly as a numerical
+tolerance and recompute the core guarantees on the enlarged interval.
+\end{enumerate}
+The need for the present $1.001$ factor should be tested before it is retained.
+
+\subsection{Theory development}
+
+The application suggests four closely connected formal results.
+
+\paragraph{Monotone CRN-to-contract abstraction.}
+For a CRN subsystem whose input-output map is monotone on a finite orthant box,
+derive a sound polyhedral contract from order extrema:
+\[
+(\Sigma,B,\Theta)\longmapsto \mathfrak C_\Sigma(B,\Theta).
+\]
+
+\paragraph{Monotonicity closure of the AND specification.}
+For coordinatewise nondecreasing two-input implementations, the LOW--HIGH and
+HIGH--LOW OFF contracts imply LOW--LOW OFF behavior. This gives a formal reason
+for the three-mode top-level specification used here.
+
+\paragraph{Contract-guided parameter synthesis.}
+For a design parameter $p$, define
+\[
+\mathcal P_{\rm feasible}
+=
+\left\{
+p:
+\mathfrak C_{\Sigma(p)}(B_q,\Theta_p)
+\preceq C_{\rm spec}^q
+\ \text{for every mode }q
+\right\}.
+\]
+The HrpV interval and split-T7 $K$ interval are explicit examples in which this
+set is obtained analytically from monotonicity and the top-level thresholds.
+
+\paragraph{Mechanism-specific contract templates.}
+The direct binding core, positive-part inhibited core, and InvF/SicA turnover
+core admit different analytic bounding structures. A general result can
+identify CRN motifs for which finite-box contracts can be generated
+automatically and remain polyhedral after the logarithmic transformation.
+
+The monotonicity arguments in Incer, Pandey, Nolan, Peterman, Galloway, Sontag,
+and Del Vecchio (CDC 2024) provide the natural prior formal starting point.
+The next theory pass should distinguish the monotonicity machinery inherited
+from that work from the new finite-box CRN-to-contract construction,
+monotonicity closure result, and refinement-based parameter-synthesis results
+developed here. The exact theorem-level comparison should be added after
+reviewing that specific paper in detail.
