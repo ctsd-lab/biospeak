@@ -336,7 +336,7 @@ two redesigns and then run the same mode-wise refinement checks for all three.
     ),
     code(
         """
-# Contract-feasible singleton redesign windows for the two direct QSS cores.
+# Contract-feasible fixed-parameter redesign windows for the two direct QSS cores.
 representative_by_core = {}
 for candidate in candidates:
     representative_by_core.setdefault(candidate.core.name, candidate)
@@ -421,7 +421,7 @@ for core_name, redesign in REDESIGNS.items():
 display(pd.DataFrame(redesign_rows))
 
 display(pd.DataFrame([{
-    "Redesign contract range": "singleton selected synthesis point",
+    "Redesign contract range": "fixed selected synthesis point",
     "gain fold": REDESIGN_UNCERTAINTY["gain_fold"],
     "affinity fold": REDESIGN_UNCERTAINTY["affinity_fold"],
     "output-rate fold": REDESIGN_UNCERTAINTY["output_rate_fold"],
