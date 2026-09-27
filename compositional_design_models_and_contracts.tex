@@ -240,27 +240,18 @@ $(\xi_1,\xi_2)$, which justifies its corner-based mode certification.
 \subsection{Finite-box contract generation}
 
 The current code constructs a local core contract for each top-level input
-region. This can be formalized as a contract abstraction operator
+region at the fixed parameter values defining that design. This can be written
+as a contract abstraction operator
 \[
-\mathfrak C_{\Sigma}(B,\Theta),
+\mathfrak C_{\Sigma}(B;\theta),
 \]
 where $\Sigma$ is the subsystem, $B=[\underline\xi,\overline\xi]$ is a finite
-input box, and $\Theta$ is the parameter set used for verification.
+input box, and $\theta$ is the selected design parameter vector.
 
 For a coordinatewise monotone input-output map,
 \[
-y_{\min}(B,\theta)=y(\underline\xi,\theta),\qquad
-y_{\max}(B,\theta)=y(\overline\xi,\theta).
-\]
-If parameter monotonicity is known, adverse parameter endpoints can be selected
-in the same way:
-\[
-\underline y(B,\Theta)
-=
-\inf_{\theta\in\Theta}y(\underline\xi,\theta),\qquad
-\overline y(B,\Theta)
-=
-\sup_{\theta\in\Theta}y(\overline\xi,\theta).
+y_{\min}(B;\theta)=y(\underline\xi;\theta),\qquad
+y_{\max}(B;\theta)=y(\overline\xi;\theta).
 \]
 These extrema give a sound local contract over $B$. For the direct QSS core,
 the structural inequalities on $C$ provide additional affine log-coordinate
@@ -268,9 +259,9 @@ guarantees.
 
 The implementation therefore generates
 \[
-\mathfrak C_{\Sigma_3}(B_{\rm ON},\Theta),\quad
-\mathfrak C_{\Sigma_3}(B_{\rm OFF,1},\Theta),\quad
-\mathfrak C_{\Sigma_3}(B_{\rm OFF,2},\Theta).
+\mathfrak C_{\Sigma_3}(B_{\rm ON};\theta),\quad
+\mathfrak C_{\Sigma_3}(B_{\rm OFF,1};\theta),\quad
+\mathfrak C_{\Sigma_3}(B_{\rm OFF,2};\theta).
 \]
 This is one biochemical subsystem with three local abstractions. An alternative
 would be one core contract over a larger box containing all three environments;
