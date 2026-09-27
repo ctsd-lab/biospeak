@@ -17,20 +17,9 @@ specification is
 (\xi_1,\xi_2)\in L\times H &\Longrightarrow y\le 60~{\rm nM/min},\\
 (\xi_1,\xi_2)\in H\times L &\Longrightarrow y\le 60~{\rm nM/min}.
 \end{align}
-A separate LOW--LOW mode is unnecessary once coordinatewise monotonicity is
-established. If
-\[
-\xi_1\le\xi_1',\quad \xi_2\le\xi_2'
-\Longrightarrow
-y(\xi_1,\xi_2)\le y(\xi_1',\xi_2'),
-\]
-then for any $(\xi_1,\xi_2)\in L\times L$ and any
-$\widehat\xi_2\in H$,
-\[
-y(\xi_1,\xi_2)\le y(\xi_1,\widehat\xi_2)\le 60.
-\]
-Thus the LOW--LOW truth-table condition follows from the LOW--HIGH OFF
-contract. The same argument follows from HIGH--LOW. The transition interval
+By the monotonicity result established for this model class, the LOW--LOW
+condition is implied by either mixed OFF mode and is therefore not introduced
+as an additional contract. The transition interval
 $0.07<\xi_i<0.35$ remains unspecified.
 
 \subsection{Lumped expression modules and the common complex model}
@@ -287,26 +276,14 @@ This is one biochemical subsystem with three local abstractions. An alternative
 would be one core contract over a larger box containing all three environments;
 that contract would generally be looser.
 
-\subsection{Fixed-parameter redesign verification}
+\subsection{Design comparison semantics}
 
-The initial designs use provisional multiplicative parameter ranges
-\[
-f_g=1.25,\qquad f_K=1.30,\qquad f_r=1.25.
-\]
-The redesigned calculations currently set those factors to one and evaluate
-the selected redesign parameters at fixed values.
-
-The interpretation is: for each redesigned architecture, the contract is
-verified for every input in the specified ON or OFF input region at the
-selected parameter values. The input contract still covers a continuum of
-promoter activities. Only the parameter set is a single selected design point.
-This is sufficient for the current contract-guided parameter-synthesis
-question. Parameter robustness is a separate question and is not required for
-the present claim.
-
-The phrase ``singleton contract'' should therefore be avoided. ``Fixed-parameter
-verification'' or ``verification at the selected synthesis point'' describes
-the calculation more accurately.
+The initial and redesigned architectures are all evaluated at the fixed
+parameter values stated above. For each design, the contract is verified over
+every input in the corresponding ON or OFF region. Thus the design comparison
+is between three initial parameterized implementations and their three updated
+implementations. No auxiliary uncertainty factors are part of the present
+design claim.
 
 \subsection{Zero output and the logarithmic epsilon floor}
 
@@ -324,66 +301,154 @@ y\le\varepsilon_y.
 This is a numerical representation floor. It is not a biological leak model
 and is not an additional physical parameter.
 
-\subsection{Numerical assumption padding}
+\subsection{Closed contract boundaries}
 
-The current implementation expands the local core assumption interval by the
-factor $1.001$. The code comment states that this was introduced to avoid
-numerical equality artifacts when Pacti eliminates internal
-component-abundance variables. In exact contract arithmetic, equality of an
-upstream guarantee boundary and a downstream assumption boundary is admissible.
-
-An outward pad is formally problematic if the core output bounds are derived
-on the original interval and then asserted over the larger padded interval.
-The preferred implementation is therefore either
-\begin{enumerate}
-\item use the exact physical assumption bounds if Pacti handles the shared
-boundaries reliably; or
-\item if a numerical margin is necessary, define it explicitly as a numerical
-tolerance and recompute the core guarantees on the enlarged interval.
-\end{enumerate}
-The need for the present $1.001$ factor should be tested before it is retained.
-
-\subsection{Theory development}
-
-The application suggests four closely connected formal results.
-
-\paragraph{Monotone CRN-to-contract abstraction.}
-For a CRN subsystem whose input-output map is monotone on a finite orthant box,
-derive a sound polyhedral contract from order extrema:
+The Pacti contracts use closed polyhedral inequalities. The expression-module
+guarantee
 \[
-(\Sigma,B,\Theta)\longmapsto \mathfrak C_\Sigma(B,\Theta).
+z_{Y_i}=z_{\xi_i}+\log g_i
+\]
+is encoded by the two inequalities that enforce equality, and the downstream
+core assumption uses exactly the same endpoint values. Therefore an upstream
+guarantee boundary can meet a downstream assumption boundary at equality.
+The earlier numerical factor $1.001$ has been removed; no numerical padding is
+part of the contract construction.
+
+\subsection{Monotonicity as an additional CRN-to-contract construction principle}
+
+The preceding CRN theory constructs polyhedral assume--guarantee contracts
+from two kinds of structural information: exponent-polytopes of mass-action
+monomials and dominance-margin assumptions. Monotonicity provides a second
+source of structure that can be used to construct and tighten contracts over
+finite operating regions.
+
+\paragraph{Existing monotonicity reduction.}
+Incer, Pandey, Nolan, Peterman, Galloway, Sontag, and Del Vecchio (CDC 2024)
+consider requirements of the form
+\[
+\psi(\theta)
+\Longleftrightarrow
+\forall u.\bigl(\sigma(u)\Longrightarrow\phi(u,\theta)\bigr),
+\]
+and show that when each scalar requirement can be written as
+\[
+F_j\!\left(G^j_1(u_1),\ldots,G^j_m(u_m),\theta\right)\ge0
+\]
+with $F_j$ monotone in each transformed input argument, the universal
+quantifiers can be eliminated by substituting the appropriate extremal value
+of each $G_i^j$. For interval constraints and monotone $G_i^j$, these extrema
+occur at the interval endpoints. Their result yields the most relaxed
+parameter condition compatible with the stated input range and requirement.
+
+The useful distinction here is that the present work starts one level lower,
+from a CRN description, and seeks a contract abstraction before carrying out
+system-level refinement or parameter synthesis.
+
+\paragraph{Monotone finite-region contract theorem.}
+Consider a positive steady-state input-output map of a CRN subsystem,
+\[
+y=h(u;\theta),\qquad
+u\in B:=\prod_{i=1}^m[\underline u_i,\overline u_i],
+\]
+for a fixed parameter value $\theta$. Suppose that $h$ is coordinatewise
+monotone on $B$. Let $\underline u^{\,h}$ and $\overline u^{\,h}$ denote the
+two order corners selected according to the monotonicity sign of each input:
+for an increasing coordinate, the lower corner uses $\underline u_i$ and the
+upper corner uses $\overline u_i$, with the choices reversed for a decreasing
+coordinate. Then
+\[
+h(\underline u^{\,h};\theta)
+\le h(u;\theta)
+\le h(\overline u^{\,h};\theta),
+\qquad \forall u\in B.
+\]
+For $h>0$, the corresponding log-coordinate contract
+\[
+A_B:\quad
+\log\underline u_i\le z_{u_i}\le\log\overline u_i,
+\]
+\[
+G_B:\quad
+\log h(\underline u^{\,h};\theta)
+\le z_y
+\le
+\log h(\overline u^{\,h};\theta)
+\]
+is polyhedral and sound. For a one-sided top-level requirement, only the
+relevant extremal inequality is needed.
+
+The proof is the order property itself, applied coordinate by coordinate.
+The significance for contract construction is that a continuum of CRN
+behaviors over a finite region is replaced by finitely many extremal
+evaluations.
+
+\paragraph{Monotonicity tightening of a CRN regime contract.}
+Let $\mathcal C_R=(a_R,g_R)$ be a contract obtained from the CRN structure by
+the exponent-polytope or dominance-margin construction developed earlier in
+the paper. Suppose a finite input region $B$ lies inside the corresponding
+operating domain and the steady-state map is monotone on that region. Then the
+region-specific contract
+\[
+\mathcal C_{R,B}
+=
+\bigl(a_R\wedge A_B,\; g_R\wedge G_B\bigr)
+\]
+is sound and refines the structural contract on that region. Thus
+monomial-dominance information and order information can be used together:
+the first controls admissible CRN sensitivities and regime validity, while the
+second provides exact finite-region output extrema.
+
+This gives a direct extension of the current CRN-to-contract pipeline:
+\[
+\text{CRN structure}
+\;\longrightarrow\;
+\text{regime/dominance contract}
+\;\longrightarrow\;
+\text{monotonicity tightening on a finite region}
+\;\longrightarrow\;
+\text{composition and refinement}.
 \]
 
-\paragraph{Monotonicity closure of the AND specification.}
-For coordinatewise nondecreasing two-input implementations, the LOW--HIGH and
-HIGH--LOW OFF contracts imply LOW--LOW OFF behavior. This gives a formal reason
-for the three-mode top-level specification used here.
-
 \paragraph{Contract-guided parameter synthesis.}
-For a design parameter $p$, define
+Let $p$ be a design parameter entering the CRN or its reduced steady-state
+map. For the mode-indexed top-level contract family, define
 \[
 \mathcal P_{\rm feasible}
 =
 \left\{
 p:
-\mathfrak C_{\Sigma(p)}(B_q,\Theta_p)
-\preceq C_{\rm spec}^q
-\ \text{for every mode }q
+\mathfrak C_{\Sigma(p)}(B_q)
+\preceq
+\mathcal C_{\rm spec}^q
+\quad\text{for every mode }q
 \right\}.
 \]
-The HrpV interval and split-T7 $K$ interval are explicit examples in which this
-set is obtained analytically from monotonicity and the top-level thresholds.
+When the relevant guarantee predicates are monotone in the inputs, the
+universal requirement over each $B_q$ reduces to the appropriate order corner,
+following the quantifier-elimination result of Incer et al. If the resulting
+inequality is also monotone in $p$, the feasible parameter set can often be
+obtained analytically from its boundary equations. The HrpV interval and the
+split-T7 $K$ interval are two instances of this construction.
 
-\paragraph{Mechanism-specific contract templates.}
-The direct binding core, positive-part inhibited core, and InvF/SicA turnover
-core admit different analytic bounding structures. A general result can
-identify CRN motifs for which finite-box contracts can be generated
-automatically and remain polyhedral after the logarithmic transformation.
+\paragraph{Composition and context effects.}
+The current AND-gate example uses load-free interconnections. The expression
+maps are increasing, and each integration-core map used here is increasing in
+its two external branch inputs, so the composed steady-state input-output map
+preserves the required monotonicity.
 
-The monotonicity arguments in Incer, Pandey, Nolan, Peterman, Galloway, Sontag,
-and Del Vecchio (CDC 2024) provide the natural prior formal starting point.
-The next theory pass should distinguish the monotonicity machinery inherited
-from that work from the new finite-box CRN-to-contract construction,
-monotonicity closure result, and refinement-based parameter-synthesis results
-developed here. The exact theorem-level comparison should be added after
-reviewing that specific paper in detail.
+The CDC 2024 analysis also identifies the important limitation for future
+extensions: interconnecting components with monotone input-output relations
+does not by itself guarantee that the full system-level map remains monotone
+when context effects create additional couplings. Their proposed remedy is to
+introduce requirements on intermediate signals so that monotonicity-based
+elimination can still be applied, with possible conservatism. In the present
+framework, those intermediate requirements can be represented directly as
+subsystem contracts. This provides a natural route for extending the CRN
+contract construction to retroactivity, resource competition, and other
+context-dependent interconnections.
+
+\paragraph{AND-mode closure as a corollary.}
+For a two-input architecture whose output is coordinatewise nondecreasing, the
+LOW--HIGH and HIGH--LOW OFF contracts imply the LOW--LOW OFF behavior
+immediately by the finite-region monotonicity theorem. This corollary is used
+implicitly in the three-mode AND specification above.
