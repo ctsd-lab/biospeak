@@ -60,7 +60,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib"))
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.patches import FancyArrowPatch, Patch, Rectangle
+from matplotlib.patches import Patch, Rectangle
 import numpy as np
 import pandas as pd
 
@@ -200,7 +200,7 @@ The desired AND behavior contains one ON region and two OFF regions:
 The input regions are stated in promoter activity units. The ON region lies inside
 the experimentally useful Marionette RPU range. The OFF interval begins near
 the characterized leak floors and extends to 20% of the ON onset; the interval
-from 0.07 to 0.35 RPU is deliberately unspecified as a transition region. The
+from 0.07 to 0.35 RPU is deliberately left unconstrained. The
 round exploratory flux targets impose a twofold output separation. In an
 experimental design, these levels would be set from measured sensor variation
 and the activation and burden limits of the downstream receiver.
@@ -304,8 +304,8 @@ pd.DataFrame(interval_rows)
 ### Initial design insight
 
 The broadened LOW range exposes a limitation that the leak-only specification
-hid: none of the three direct complex-formation cores guarantees the complete
-AND behavior. HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF
+hid: none of the three direct complex-formation cores satisfies the complete
+AND contract. HrpR/HrpS and InvF/SicA reach the ON target but exceed the OFF
 ceiling; split T7 RNAP also falls slightly below the ON target. The equality of
 each ordered pair after the RPU interface still shows what the abstraction
 provides; their required inducer concentrations remain different in the sensor
@@ -480,8 +480,8 @@ All panels use the actual promoter activities $(\xi_1,\xi_2)$ in RPU on
 logarithmic axes; the coordinates are not divided by an operating point or by
 a kinetic constant. The first panel states the required environments and the
 common characterized sensor-admissible domain for all six designs.
-The other panels shade where each biological core guarantees the ON floor or
-the OFF ceiling over the stated parameter ranges. Curved shaded boundaries
+The other panels shade the input satisfaction sets for the ON and OFF contract
+guarantees over the stated parameter ranges. Curved shaded boundaries
 come from the full QSS binding relation rather than from artificial rectangular
 design regions.
 """
@@ -622,13 +622,13 @@ handles = [
     Patch(facecolor="#d9edf2", edgecolor="#39798a", alpha=0.42,
           label="common sensor-valid domain"),
     Patch(facecolor="#b8dfc2", edgecolor="#24733b", alpha=0.72,
-          label="specified ON environment"),
+          label="top-level ON assumption"),
     Patch(facecolor="#d9dde2", edgecolor="#59636e", alpha=0.45,
-          label="specified OFF environments"),
+          label="top-level OFF assumptions"),
     Patch(facecolor="#79d18b", edgecolor="none", alpha=0.48,
-          label="guaranteed ON output"),
+          label="ON contract satisfaction set"),
     Patch(facecolor="#cfd5dd", edgecolor="none", alpha=0.78,
-          label="guaranteed OFF output"),
+          label="OFF contract satisfaction set"),
 ]
 fig.legend(
     handles=handles,
@@ -663,9 +663,9 @@ S_D^q=\{\xi:\ y_D(\xi;\theta)\text{ satisfies }G_q
 \]
 A design passes mode $q$ when $A_q\subseteq S_D^q$ (every allowed input in
 that mode produces only outputs satisfying its output requirement). In the
-heatmap, the green outline is $A_{\rm ON}$ and the green shading is
-$S_D^{\rm ON}$; the gray outlines are the two OFF assumptions and the gray
-shading is the common set where the OFF ceiling is guaranteed.
+heatmap, the black outline is $A_{\rm ON}$ and the green shading is
+$S_D^{\rm ON}$; the white outlines are the two OFF assumptions and the gray
+shading is the common OFF contract satisfaction set.
 """
     ),
     markdown(
@@ -673,130 +673,94 @@ shading is the common set where the OFF ceiling is guaranteed.
 ## Initial designs and mechanism-specific redesigns
 
 Each column follows one biological architecture from its initial design in the
-top row to its literature-grounded redesign in the bottom row. The outlined ON
+top row to its mechanism-specific redesign in the bottom row. The outlined ON
 and OFF regions are the same fixed top-level requirement in every panel:
 $y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
-The arrow between rows states the mechanism change used for that architecture.
 
 Color gives the worst-case lower output flux over the stated parameter ranges.
-Green shading marks inputs where the ON floor is guaranteed, and gray shading
-marks inputs where the OFF ceiling is guaranteed. Thick white contours show
-the two output thresholds: solid for ON and dashed for OFF.
+Green and gray shading mark the ON and OFF contract satisfaction sets. Thick
+white contours show the two top-level contract guarantee boundaries: solid for
+ON and dashed for OFF.
 """
     ),
     code(
         r"""
-fig, axes = plt.subplots(2, 3, figsize=(16.8, 11.0))
+fig, axes = plt.subplots(2, 3, figsize=(16.8, 10.2))
 fig.subplots_adjust(
-    left=0.075, right=0.89, top=0.88, bottom=0.16,
-    wspace=0.28, hspace=0.62,
+    left=0.075, right=0.89, top=0.94, bottom=0.17,
+    wspace=0.28, hspace=0.34,
 )
 
-last_mesh = None
-vmax = max(
-    max(envelope_summary["on_floors"].values()),
-    max(redesigned_envelope_summary["on_floors"].values()),
-) * 1.8
+xi_flux = np.geomspace(0.004, 8.0, 500)
+XI1_flux, XI2_flux = np.meshgrid(xi_flux, xi_flux)
+flux_limits = (xi_flux[0], xi_flux[-1])
+vmax = 300.0
 
-def draw_flux_panel(ax, lower, upper, title):
-    global last_mesh
+def draw_flux_panel(ax, lower, upper, title=None):
     mesh = ax.pcolormesh(
-        XI1, XI2, lower, shading="auto", cmap="viridis", vmin=0, vmax=vmax,
+        XI1_flux, XI2_flux, lower,
+        shading="auto", cmap="coolwarm", vmin=0, vmax=vmax,
     )
-    ax.contourf(
-        XI1, XI2, upper <= off1_condition.flux_threshold,
-        levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.42
-    )
-    ax.contourf(
-        XI1, XI2, lower >= on_condition.flux_threshold,
-        levels=[0.5, 1.5], colors=["#79d18b"], alpha=0.30
-    )
+    off_mask = upper <= off1_condition.flux_threshold
+    on_mask = lower >= on_condition.flux_threshold
+    if np.any(off_mask):
+        ax.contourf(
+            XI1_flux, XI2_flux, off_mask,
+            levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.42,
+        )
+    if np.any(on_mask):
+        ax.contourf(
+            XI1_flux, XI2_flux, on_mask,
+            levels=[0.5, 1.5], colors=["#79d18b"], alpha=0.30,
+        )
     if np.nanmin(upper) <= off1_condition.flux_threshold <= np.nanmax(upper):
         ax.contour(
-            XI1, XI2, upper,
+            XI1_flux, XI2_flux, upper,
             levels=[off1_condition.flux_threshold], colors=["white"],
             linewidths=4.0, linestyles="dashed", zorder=4,
         )
     if np.nanmin(lower) <= on_condition.flux_threshold <= np.nanmax(lower):
         ax.contour(
-            XI1, XI2, lower,
+            XI1_flux, XI2_flux, lower,
             levels=[on_condition.flux_threshold], colors=["white"],
             linewidths=4.0, linestyles="solid", zorder=4,
         )
     add_region(
         ax, on_condition.xi1_bounds, on_condition.xi2_bounds,
-        "none", "#79d18b", alpha=1.0, lw=2.2
+        "none", "black", alpha=1.0, lw=3.0,
     )
-    add_region(
-        ax, off1_condition.xi1_bounds, off1_condition.xi2_bounds,
-        "none", "#d9dde2", alpha=1.0, lw=1.4
-    )
-    add_region(
-        ax, off2_condition.xi1_bounds, off2_condition.xi2_bounds,
-        "none", "#d9dde2", alpha=1.0, lw=1.4
-    )
-    ax.set_title(title, fontsize=16, fontweight="bold")
+    for condition in (off1_condition, off2_condition):
+        add_region(
+            ax, condition.xi1_bounds, condition.xi2_bounds,
+            "none", "white", alpha=1.0, lw=3.0,
+        )
+    if title:
+        ax.set_title(title, fontsize=16, fontweight="bold")
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlim(0.004, 0.75)
-    ax.set_ylim(0.004, 0.75)
+    ax.set_xlim(*flux_limits)
+    ax.set_ylim(*flux_limits)
     ax.set_xlabel(r"$\xi_1$ [RPU]")
     ax.set_ylabel(r"$\xi_2$ [RPU]")
     ax.grid(which="both", alpha=0.12)
     ax.tick_params(axis="both", which="both", labelsize=16)
     return mesh
 
-for col, (core_name, candidate) in enumerate(representatives.items()):
-    lower, upper = parameter_range_flux_bounds(candidate, XI1, XI2)
-    last_mesh = draw_flux_panel(axes[0, col], lower, upper, core_name)
-
-    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
-        candidate, XI1, XI2
-    )
-    last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new, core_name)
-
-redesign_caption = {
-    "HrpR/HrpS": (
-        r"tune HrpV" + "\n" +
-        r"$V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$"
-    ),
-    "split T7 RNAP": (
-        r"raise effective $K$" + "\n" +
-        r"$K=3.0\,\mu\mathrm{M}$"
-    ),
-    "InvF/SicA": (
-        r"use SipC turnover" + "\n" +
-        r"$k_Z=0.1\,\mathrm{min}^{-1}$ + degradation rates"
-    ),
+design_titles = {
+    "HrpR/HrpS": "Design 1: HrpR/HrpS",
+    "split T7 RNAP": "Design 2: split T7 RNAP",
+    "InvF/SicA": "Design 3: InvF/SicA",
 }
 
-# Draw one explicit design-change arrow per column.
-fig.canvas.draw()
-for col, core_name in enumerate(representatives):
-    top_box = axes[0, col].get_position()
-    bottom_box = axes[1, col].get_position()
-    x_mid = 0.5 * (top_box.x0 + top_box.x1)
-    y_start = top_box.y0 - 0.012
-    y_end = bottom_box.y1 + 0.012
-    arrow = FancyArrowPatch(
-        (x_mid, y_start),
-        (x_mid, y_end),
-        transform=fig.transFigure,
-        arrowstyle="-|>",
-        mutation_scale=18,
-        linewidth=1.5,
-        clip_on=False,
+for col, (core_name, candidate) in enumerate(representatives.items()):
+    lower, upper = parameter_range_flux_bounds(candidate, XI1_flux, XI2_flux)
+    last_mesh = draw_flux_panel(
+        axes[0, col], lower, upper, design_titles[core_name]
     )
-    fig.add_artist(arrow)
-    fig.text(
-        x_mid,
-        0.5 * (y_start + y_end),
-        redesign_caption[core_name],
-        ha="center",
-        va="center",
-        fontsize=12,
-        bbox={"facecolor": "white", "edgecolor": "none", "pad": 1.5},
+    lower_new, upper_new = redesigned_parameter_range_flux_bounds(
+        candidate, XI1_flux, XI2_flux
     )
+    last_mesh = draw_flux_panel(axes[1, col], lower_new, upper_new)
 
 fig.text(
     0.018, 0.675, "Initial designs",
@@ -808,42 +772,26 @@ fig.text(
     rotation=90, va="center", ha="center",
     fontsize=16, fontweight="bold",
 )
-fig.suptitle(
-    "Fixed AND requirement across initial and redesigned architectures",
-    fontsize=16,
-    fontweight="bold",
-)
-fig.text(
-    0.5, 0.91,
-    r"ON: $y\ge 120\,\mathrm{nM/min}$; OFF: $y\le 60\,\mathrm{nM/min}$",
-    ha="center",
-    va="center",
-    fontsize=14,
-)
-
 cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.82, pad=0.025)
+cbar.solids.set_rasterized(False)
 cbar.set_label("worst-case lower output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
 
 legend = [
     Patch(facecolor="#79d18b", edgecolor="#79d18b", alpha=0.30,
-          label="guaranteed ON output"),
+          label="ON contract satisfaction set"),
     Patch(facecolor="#cfd5dd", edgecolor="#cfd5dd", alpha=0.42,
-          label="guaranteed OFF output"),
-    Patch(facecolor="none", edgecolor="#79d18b",
-          label="specified ON environment"),
-    Patch(facecolor="none", edgecolor="#777777",
-          label="specified OFF environments"),
+          label="OFF contract satisfaction set"),
     Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="solid",
-           label="ON threshold"),
+           label="ON guarantee boundary"),
     Line2D([0], [0], color="#444444", linewidth=4.0, linestyle="dashed",
-           label="OFF threshold"),
+           label="OFF guarantee boundary"),
 ]
 fig.legend(
     handles=legend,
     loc="lower center",
-    bbox_to_anchor=(0.49, 0.035),
-    ncol=3,
+    bbox_to_anchor=(0.49, 0.025),
+    ncol=4,
     frameon=False,
 )
 
@@ -851,6 +799,24 @@ output_base = Path("compositional_design_flux_maps")
 fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
 fig.savefig(output_base.with_suffix(".pdf"), bbox_inches="tight")
 plt.show()
+"""
+    ),
+    code(
+        r"""
+redesign_notes = {
+    "Design 1: HrpR/HrpS": (
+        r"HrpV inhibition; $V_{\mathrm{eff}}=0.12\,\mu\mathrm{M}$"
+    ),
+    "Design 2: split T7 RNAP": (
+        r"weakened fragment recruitment; $K=3.0\,\mu\mathrm{M}$"
+    ),
+    "Design 3: InvF/SicA": (
+        r"SicA--SipC turnover; $K_{YZ}=28\,\mathrm{nM}$, "
+        r"$k_Z=0.1\,\mathrm{min}^{-1}$, with the selected degradation rates"
+    ),
+}
+for design, update in redesign_notes.items():
+    print(f"{design}: {update}")
 """
     ),
     markdown(
@@ -864,7 +830,7 @@ plt.show()
 - HrpV and split-T7 parameter values are chosen from the contract-feasible
   windows computed above; InvF/SicA uses the selected turnover/degradation
   parameters.
-- The shaded regions show where the corresponding output guarantee is certified.
+- The shaded regions are the corresponding input-space contract satisfaction sets.
 """
     ),
 ]
