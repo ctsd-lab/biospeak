@@ -66,13 +66,11 @@ import pandas as pd
 
 from compositional_regime_contracts import (
     CORES,
-    DEFAULT_UNCERTAINTY,
     DEFAULT_ON_THRESHOLD_NM_PER_MIN,
     DEFAULT_OFF_THRESHOLD_NM_PER_MIN,
     MARIONETTE_SENSORS,
     REDESIGNS,
     REDESIGN_PARAMETERS,
-    REDESIGN_UNCERTAINTY,
     complex_concentration,
     condition_flux_interval,
     infer_regime,
@@ -123,14 +121,11 @@ sensor_table
     ),
     markdown(
         r"""
-## Integration cores and provisional design ranges
+## Integration cores and initial design parameters
 
-The three architectures are literature-backed. The effective affinities,
-promoter-to-component gains, and output rates below are **provisional nominal
-values**, not measurements reported by those papers. They place all three
-architectures in a common coarse-grained unit system for this methodology
-example. The uncertainty factors are deliberately varied around the nominals;
-they will be replaced by measured ranges in a later parameterization pass.
+The three architectures use the effective affinities, promoter-to-component
+gains, and output rates below as the fixed parameter values defining the
+initial designs in the computational example.
 """
     ),
     code(
@@ -142,8 +137,8 @@ for core in CORES:
         "Input 1": core.component_1,
         "Input 2": core.component_2,
         "Output promoter": core.output_promoter,
-        "K nominal [nM]": core.affinity_nM,
-        "k_out nominal [1/min]": core.output_rate_per_min,
+        "K [nM]": core.affinity_nM,
+        "k_out [1/min]": core.output_rate_per_min,
         "g1 [nM/RPU]": core.gain_1_nM_per_rpu,
         "g2 [nM/RPU]": core.gain_2_nM_per_rpu,
         "center regime": core.nominal_regime,
@@ -151,12 +146,6 @@ for core in CORES:
 core_table = pd.DataFrame(core_rows)
 display(core_table)
 
-uncertainty_table = pd.DataFrame([
-    {"Parameter class": "lumped expression gains", "Range": f"nominal / {DEFAULT_UNCERTAINTY['gain_fold']} to nominal x {DEFAULT_UNCERTAINTY['gain_fold']}"},
-    {"Parameter class": "effective affinity", "Range": f"nominal / {DEFAULT_UNCERTAINTY['affinity_fold']} to nominal x {DEFAULT_UNCERTAINTY['affinity_fold']}"},
-    {"Parameter class": "output rate", "Range": f"nominal / {DEFAULT_UNCERTAINTY['output_rate_fold']} to nominal x {DEFAULT_UNCERTAINTY['output_rate_fold']}"},
-])
-display(uncertainty_table)
 """
     ),
     markdown(
@@ -241,8 +230,8 @@ bounds
 \frac{Y_1Y_2}{K+Y_1+Y_2}\le C_3
 \le\min\left\{Y_1,Y_2,\frac{Y_1Y_2}{K}\right\}.
 \]
-Monotonic endpoint bounds tighten this contract over each region. Parameter-range
-endpoints are incorporated before composing the two lumped expression
+Monotonic endpoint bounds tighten this contract over each region. The fixed
+initial design parameters are used when composing the two lumped expression
 contracts with the core contract. A design implements the complete AND
 specification only if it refines the ON, OFF-1, and OFF-2 contracts.
 
@@ -313,9 +302,10 @@ contracts.
 
 ## Contract-guided redesigns
 
-The fixed ON/OFF specification remains unchanged. The redesigned cases are
-evaluated as selected synthesis points, so the contract calculation determines
-whether each chosen parameter value satisfies all three modes.
+The fixed ON/OFF specification remains unchanged. Each initial design is
+evaluated at its stated parameter values, and each redesign updates the
+mechanism-specific design parameter(s). The contract calculation determines
+whether the resulting design satisfies all three modes.
 
 1. **HrpR/HrpS:** treat the HrpV inhibitory level as a tunable regulation
    parameter. For the fixed specification, the feasible singleton-design
@@ -420,12 +410,6 @@ for core_name, redesign in REDESIGNS.items():
     })
 display(pd.DataFrame(redesign_rows))
 
-display(pd.DataFrame([{
-    "Redesign contract range": "fixed selected synthesis point",
-    "gain fold": REDESIGN_UNCERTAINTY["gain_fold"],
-    "affinity fold": REDESIGN_UNCERTAINTY["affinity_fold"],
-    "output-rate fold": REDESIGN_UNCERTAINTY["output_rate_fold"],
-}]))
 """
     ),
     code(
@@ -774,7 +758,7 @@ fig.text(
 )
 cbar = fig.colorbar(last_mesh, ax=axes.ravel().tolist(), shrink=0.82, pad=0.025)
 cbar.solids.set_rasterized(False)
-cbar.set_label("worst-case lower output flux [nM/min]")
+cbar.set_label("output flux [nM/min]")
 cbar.ax.tick_params(labelsize=16)
 
 legend = [
@@ -824,9 +808,8 @@ for design, update in redesign_notes.items():
 ## Interpretation
 
 - The outlined ON/OFF regions and output thresholds are identical in both rows.
-- The upper row shows the initial candidates with their provisional uncertainty
-  ranges.
-- The lower row shows the selected redesign synthesis points.
+- The upper row shows the three fixed initial designs.
+- The lower row shows the corresponding updated designs.
 - HrpV and split-T7 parameter values are chosen from the contract-feasible
   windows computed above; InvF/SicA uses the selected turnover/degradation
   parameters.
