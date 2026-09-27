@@ -175,10 +175,9 @@ DEFAULT_OFF_THRESHOLD_NM_PER_MIN = 60.0
 # Mechanism-specific redesign parameters.
 #
 # The initial candidates retain the broad provisional uncertainty factors above.
-# The redesigned candidates below are synthesis points: each selected parameter
-# value is treated as a singleton contract so that the notebook can demonstrate
-# the design step itself. Robustness around these new settings can be added once
-# the redesigned parts are characterized.
+# The redesigned candidates below are evaluated at fixed selected parameter
+# values so that the notebook can demonstrate the contract-guided synthesis
+# step itself. The input contracts still cover the complete ON/OFF regions.
 #
 # HrpR/HrpS: HrpV is treated as a tunable regulatory level. For the fixed
 # ON/OFF specification and singleton redesigned parameters, the feasible HrpV
@@ -267,10 +266,11 @@ REDESIGN_PARAMETERS = {
     },
 }
 
-# Finite upper approximation used only when a stoichiometric threshold gives
-# an exact zero output. In the original flux coordinate y=0 satisfies
-# y <= ZERO_FLUX_UPPER_EPS; this lets the corresponding sound upper guarantee
-# be represented with a finite logarithmic constant.
+# Numerical representation floor used only when the physical model gives
+# exactly zero output but the contract must be represented in z_flux=log(y).
+# This is not a biological leak term or physical model parameter: the original
+# model value remains y=0, while the log-coordinate contract uses
+# y <= ZERO_FLUX_UPPER_EPS to obtain a finite logarithmic constant.
 ZERO_FLUX_UPPER_EPS = 1.0e-12
 
 
@@ -447,11 +447,12 @@ def redesigned_parameter_range_flux_bounds(
     xi_2_rpu: np.ndarray | float,
     uncertainty: dict[str, float] = REDESIGN_UNCERTAINTY,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return lower/upper flux bounds for the selected redesigned design point.
+    """Return lower/upper flux bounds at the selected redesign parameters.
 
-    The redesign stage uses singleton parameter sets. Thus the lower and upper
-    bounds coincide for these selected synthesis points. Initial candidates
-    retain the broader provisional uncertainty ranges in DEFAULT_UNCERTAINTY.
+    The redesign stage evaluates fixed selected parameter values, so the lower
+    and upper parameter envelopes coincide. The input variables still range
+    over the complete contract region. Initial candidates retain the broader
+    provisional parameter ranges in DEFAULT_UNCERTAINTY.
     """
 
     core = candidate.core
