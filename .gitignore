@@ -1,0 +1,38 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Matplotlib
+.matplotlib/
+
+# Local Python environments and packaging output
+.venv/
+venv/
+env/
+ENV/
+.eggs/
+*.egg-info/
+build/
+dist/
+
+# OS-generated metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

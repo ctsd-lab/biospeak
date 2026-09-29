@@ -58,6 +58,17 @@ from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib"))
 
+PAPER_FIGURES_DIR = next(
+    (
+        base / "paper_ACC_2027" / "figs"
+        for base in (Path.cwd(), *Path.cwd().parents)
+        if (base / "paper_ACC_2027" / "figs").is_dir()
+    ),
+    None,
+)
+if PAPER_FIGURES_DIR is None:
+    raise FileNotFoundError("Could not find paper_ACC_2027/figs")
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
@@ -629,7 +640,7 @@ fig.legend(
 )
 
 fig.suptitle("Top-level AND specification and candidate guarantees", fontsize=16, fontweight="bold")
-output_base = Path("compositional_operating_region_summary")
+output_base = PAPER_FIGURES_DIR / "compositional_operating_region_summary"
 fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
 fig.savefig(output_base.with_suffix(".pdf"), bbox_inches="tight")
 plt.show()
@@ -669,10 +680,9 @@ top row to its mechanism-specific redesign in the bottom row. The outlined ON
 and OFF regions are the same fixed top-level requirement in every panel:
 $y\ge 120$ nM/min in the ON region and $y\le 60$ nM/min in either OFF region.
 
-Color gives the worst-case lower output flux over the stated parameter ranges.
-Green and gray shading mark the ON and OFF contract satisfaction sets. The
-solid and dashed black contours show the top-level ON and OFF contract guarantee
-boundaries.
+Color gives the output flux at the fixed design parameter values.
+Gray shading marks the OFF contract satisfaction set. The solid and dashed
+black contours show the top-level ON and OFF contract guarantee boundaries.
 """
     ),
     code(
@@ -695,16 +705,10 @@ def draw_flux_panel(ax, lower, upper, title=None):
         shading="auto", cmap=flux_cmap, vmin=0, vmax=vmax,
     )
     off_mask = upper <= off1_condition.flux_threshold
-    on_mask = lower >= on_condition.flux_threshold
     if np.any(off_mask):
         ax.contourf(
             XI1_flux, XI2_flux, off_mask,
             levels=[0.5, 1.5], colors=["#cfd5dd"], alpha=0.42,
-        )
-    if np.any(on_mask):
-        ax.contourf(
-            XI1_flux, XI2_flux, on_mask,
-            levels=[0.5, 1.5], colors=["#79d18b"], alpha=0.30,
         )
     if np.nanmin(upper) <= off1_condition.flux_threshold <= np.nanmax(upper):
         ax.contour(
@@ -782,7 +786,7 @@ fig.legend(
     frameon=False,
 )
 
-output_base = Path("compositional_design_flux_maps")
+output_base = PAPER_FIGURES_DIR / "compositional_design_flux_maps"
 fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
 fig.savefig(output_base.with_suffix(".pdf"), bbox_inches="tight")
 plt.show()
