@@ -58,17 +58,6 @@ from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib"))
 
-PAPER_FIGURES_DIR = next(
-    (
-        base / "paper_ACC_2027" / "figs"
-        for base in (Path.cwd(), *Path.cwd().parents)
-        if (base / "paper_ACC_2027" / "figs").is_dir()
-    ),
-    None,
-)
-if PAPER_FIGURES_DIR is None:
-    raise FileNotFoundError("Could not find paper_ACC_2027/figs")
-
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
@@ -490,8 +479,11 @@ design regions.
     ),
     code(
         r"""
+FIGURES_DIR = Path(os.environ.get("BIOSPEAK_FIGURES_DIR", "figures")).expanduser()
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
 plt.rcParams.update({
-    "text.usetex": True,
+    "text.usetex": os.environ.get("BIOSPEAK_USE_TEX", "0") == "1",
     "text.latex.preamble": r"\usepackage{amsfonts,amssymb}",
     "font.size": 16,
     "axes.labelsize": 16,
@@ -640,7 +632,7 @@ fig.legend(
 )
 
 fig.suptitle("Top-level AND specification and candidate guarantees", fontsize=16, fontweight="bold")
-output_base = PAPER_FIGURES_DIR / "compositional_operating_region_summary"
+output_base = FIGURES_DIR / "compositional_operating_region_summary"
 fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
 fig.savefig(output_base.with_suffix(".pdf"), bbox_inches="tight")
 plt.show()
@@ -786,7 +778,7 @@ fig.legend(
     frameon=False,
 )
 
-output_base = PAPER_FIGURES_DIR / "compositional_design_flux_maps"
+output_base = FIGURES_DIR / "compositional_design_flux_maps"
 fig.savefig(output_base.with_suffix(".png"), dpi=230, bbox_inches="tight")
 fig.savefig(output_base.with_suffix(".pdf"), bbox_inches="tight")
 plt.show()
@@ -833,14 +825,12 @@ def build_notebook(path: Path, include_plots: bool) -> None:
     )
     notebook["metadata"] = {
         "kernelspec": {
-            "display_name": "biotools",
+            "display_name": "Python 3 (biospeak)",
             "language": "python",
             "name": "python3",
         },
-        "language_info": {"name": "python", "version": "3.12.13"},
+        "language_info": {"name": "python"},
     }
-    nbf.write(notebook, path)
-    notebook = nbf.read(path, as_version=4)
     client = NotebookClient(
         notebook,
         timeout=240,

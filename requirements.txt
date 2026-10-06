@@ -1,4 +1,9 @@
+# Use Python 3.11: Pacti 0.1.0 requires <3.12 and SciPy 1.16 requires >=3.11.
 pacti==0.1.0
 numpy==1.26.4
 scipy==1.16.2
 matplotlib==3.10.6
+pandas==2.2.3
+nbformat==5.10.4
+nbclient==0.10.2
+ipykernel==6.29.5
