@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biospeak"
+version = "0.1.0"
+description = "Formal specification models for compositional design of biomolecular circuits"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "Ayush Pandey"}]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "sympy>=1.12",
+    "pacti==0.3.1",
+]
+
+[project.optional-dependencies]
+examples = ["jupyterlab", "matplotlib>=3.8", "pandas>=2"]
+dev = ["pytest>=8", "nbconvert", "ipykernel"]
+
+[tool.setuptools.packages.find]
+include = ["biospeak*"]
+
+[tool.setuptools.package-data]
+biospeak = ["data/cello/*.csv", "data/cello/*.json", "data/rbs/*.csv", "data/models/*.xml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88

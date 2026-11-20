@@ -1,0 +1,245 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:math="http://www.w3.org/1998/Math/MathML" level="3" version="2">
+  <model id="and_occupancy" timeUnits="second" substanceUnits="item" extentUnits="item">
+    <notes>
+      <html:body>Independent reference export of reaction templates. One volume unit. Concentration coordinates are arbitrary reference units, not calibrated molarity.</html:body>
+    </notes>
+    <listOfCompartments>
+      <compartment id="cell" size="1" spatialDimensions="0" constant="true" />
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="R" name="R" compartment="cell" initialAmount="0.01" hasOnlySubstanceUnits="true" boundaryCondition="true" constant="false" />
+      <species id="S" name="S" compartment="cell" initialAmount="0.02" hasOnlySubstanceUnits="true" boundaryCondition="true" constant="false" />
+      <species id="D00" name="D00" compartment="cell" initialAmount="1" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="D10" name="D10" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="D01" name="D01" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="D11" name="D11" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="mC" name="mC" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="C" name="C" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+    </listOfSpecies>
+    <listOfParameters>
+      <parameter id="kb_R" value="0.2" constant="true" />
+      <parameter id="ku_R" value="0.001" constant="true" />
+      <parameter id="kb_S" value="0.2" constant="true" />
+      <parameter id="ku_S" value="0.001" constant="true" />
+      <parameter id="tx_D11" value="0.05" constant="true" />
+      <parameter id="ktl" value="0.05" constant="true" />
+      <parameter id="dm" value="0.01" constant="true" />
+      <parameter id="dp" value="0.001" constant="true" />
+    </listOfParameters>
+    <listOfReactions>
+      <reaction id="R0_f" reversible="false">
+        <listOfReactants>
+          <speciesReference species="R" stoichiometry="1" constant="true" />
+          <speciesReference species="D00" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="D10" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D00</math:ci>
+              <math:ci>R</math:ci>
+              <math:ci>kb_R</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="R0_r" reversible="false">
+        <listOfReactants>
+          <speciesReference species="D10" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="R" stoichiometry="1" constant="true" />
+          <speciesReference species="D00" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D10</math:ci>
+              <math:ci>ku_R</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="S0_f" reversible="false">
+        <listOfReactants>
+          <speciesReference species="S" stoichiometry="1" constant="true" />
+          <speciesReference species="D00" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="D01" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D00</math:ci>
+              <math:ci>S</math:ci>
+              <math:ci>kb_S</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="S0_r" reversible="false">
+        <listOfReactants>
+          <speciesReference species="D01" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="S" stoichiometry="1" constant="true" />
+          <speciesReference species="D00" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D01</math:ci>
+              <math:ci>ku_S</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="S1_f" reversible="false">
+        <listOfReactants>
+          <speciesReference species="S" stoichiometry="1" constant="true" />
+          <speciesReference species="D10" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="D11" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D10</math:ci>
+              <math:ci>S</math:ci>
+              <math:ci>kb_S</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="S1_r" reversible="false">
+        <listOfReactants>
+          <speciesReference species="D11" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="S" stoichiometry="1" constant="true" />
+          <speciesReference species="D10" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D11</math:ci>
+              <math:ci>ku_S</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="R1_f" reversible="false">
+        <listOfReactants>
+          <speciesReference species="R" stoichiometry="1" constant="true" />
+          <speciesReference species="D01" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="D11" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D01</math:ci>
+              <math:ci>R</math:ci>
+              <math:ci>kb_R</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="R1_r" reversible="false">
+        <listOfReactants>
+          <speciesReference species="D11" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="R" stoichiometry="1" constant="true" />
+          <speciesReference species="D01" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D11</math:ci>
+              <math:ci>ku_R</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="tx_D11" reversible="false">
+        <listOfReactants>
+          <speciesReference species="D11" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="D11" stoichiometry="1" constant="true" />
+          <speciesReference species="mC" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>D11</math:ci>
+              <math:ci>tx_D11</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="tl_mC" reversible="false">
+        <listOfReactants>
+          <speciesReference species="mC" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="mC" stoichiometry="1" constant="true" />
+          <speciesReference species="C" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>ktl</math:ci>
+              <math:ci>mC</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="decay_mC" reversible="false">
+        <listOfReactants>
+          <speciesReference species="mC" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>dm</math:ci>
+              <math:ci>mC</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="decay_C" reversible="false">
+        <listOfReactants>
+          <speciesReference species="C" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>C</math:ci>
+              <math:ci>dp</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>

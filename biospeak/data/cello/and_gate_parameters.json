@@ -1,0 +1,30 @@
+[
+  {
+    "name": "SicA_InvF",
+    "type": "AND",
+    "ymax": 6.0,
+    "ymin": 0.02,
+    "K1": 0.5,
+    "K2": 0.5,
+    "n": 2.0,
+    "IL1": 1.0,
+    "IH1": 1.5,
+    "IL2": 1.0,
+    "IH2": 1.5,
+    "equation": "ymin + (ymax-ymin) * (x1^n / (K1^n + x1^n)) * (x2^n / (K2^n + x2^n))"
+  },
+  {
+    "name": "ExsC_ExsDA",
+    "type": "AND",
+    "ymax": 2.0,
+    "ymin": 0.008,
+    "K1": 0.2,
+    "K2": 0.03,
+    "n": 2.0,
+    "IL1": 1.0,
+    "IH1": 2.0,
+    "IL2": 0.1,
+    "IH2": 0.3,
+    "equation": "ymin + (ymax-ymin) * (x1^n / (K1^n + x1^n)) * (x2^n / (K2^n + x2^n))"
+  }
+]

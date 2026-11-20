@@ -1,0 +1,2 @@
+module_id,KR_proxy_au,KR_ci95_halfwidth,KS_proxy_au,KS_ci95_halfwidth,nR,nR_ci95_halfwidth,nS,nS_ci95_halfwidth,Gmax_reporter_au,R_squared,temperature_C,host,medium,data_kind,split,source,page,location,source_doi,notes
+AND_reference_30C,206.1,32.5,3135,374,2.381,0.475,1.835,0.286,7858,0.9781,30,E. coli MC1061,M9 glycerol,published_fit,calibration,main; supplement,5;5,Main text; Figure S6a,10.1038/ncomms1516,Gmax applies to rbs30 GFP reference. CI expression gain for PhrpL/rbs34 is unreported.

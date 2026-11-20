@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:math="http://www.w3.org/1998/Math/MathML" level="3" version="2">
+  <model id="not_occupancy" timeUnits="second" substanceUnits="item" extentUnits="item">
+    <notes>
+      <html:body>Independent reference export of reaction templates. One volume unit. Concentration coordinates are arbitrary reference units, not calibrated molarity.</html:body>
+    </notes>
+    <listOfCompartments>
+      <compartment id="cell" size="1" spatialDimensions="0" constant="true" />
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="C" name="C" compartment="cell" initialAmount="0.01" hasOnlySubstanceUnits="true" boundaryCondition="true" constant="false" />
+      <species id="N0" name="N0" compartment="cell" initialAmount="1" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="N1" name="N1" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="mG" name="mG" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+      <species id="G" name="G" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false" />
+    </listOfSpecies>
+    <listOfParameters>
+      <parameter id="kb_C" value="0.2" constant="true" />
+      <parameter id="ku_C" value="0.001" constant="true" />
+      <parameter id="tx_N0" value="0.051000000000000004" constant="true" />
+      <parameter id="tx_N1" value="0.001" constant="true" />
+      <parameter id="ktl" value="0.05" constant="true" />
+      <parameter id="dm" value="0.01" constant="true" />
+      <parameter id="dp" value="0.001" constant="true" />
+    </listOfParameters>
+    <listOfReactions>
+      <reaction id="bindC_f" reversible="false">
+        <listOfReactants>
+          <speciesReference species="C" stoichiometry="1" constant="true" />
+          <speciesReference species="N0" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="N1" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>C</math:ci>
+              <math:ci>N0</math:ci>
+              <math:ci>kb_C</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="bindC_r" reversible="false">
+        <listOfReactants>
+          <speciesReference species="N1" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="C" stoichiometry="1" constant="true" />
+          <speciesReference species="N0" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>N1</math:ci>
+              <math:ci>ku_C</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="tx_N0" reversible="false">
+        <listOfReactants>
+          <speciesReference species="N0" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="N0" stoichiometry="1" constant="true" />
+          <speciesReference species="mG" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>N0</math:ci>
+              <math:ci>tx_N0</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="tx_N1" reversible="false">
+        <listOfReactants>
+          <speciesReference species="N1" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="N1" stoichiometry="1" constant="true" />
+          <speciesReference species="mG" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>N1</math:ci>
+              <math:ci>tx_N1</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="tl_mG" reversible="false">
+        <listOfReactants>
+          <speciesReference species="mG" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="mG" stoichiometry="1" constant="true" />
+          <speciesReference species="G" stoichiometry="1" constant="true" />
+        </listOfProducts>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>ktl</math:ci>
+              <math:ci>mG</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="decay_mG" reversible="false">
+        <listOfReactants>
+          <speciesReference species="mG" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>dm</math:ci>
+              <math:ci>mG</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="decay_G" reversible="false">
+        <listOfReactants>
+          <speciesReference species="G" stoichiometry="1" constant="true" />
+        </listOfReactants>
+        <kineticLaw>
+          <math:math>
+            <math:apply>
+              <math:times />
+              <math:ci>G</math:ci>
+              <math:ci>dp</math:ci>
+            </math:apply>
+          </math:math>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>
