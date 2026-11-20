@@ -23,8 +23,8 @@ print(contract)
 
 ### Canonical CRN Examples
 
-* [Single protein expression](examples/canonical/single_protein_expression.ipynb)
-* [Composition of multiple protein expression subsystems](examples/canonical/protein_expression_composition.ipynb)
+* [Single Protein Expression](examples/canonical/single_protein_expression.ipynb)
+* [Composition of Multiple Protein Expression Subsystems](examples/canonical/protein_expression_composition.ipynb)
 * [Enzymatic Output Flux](examples/canonical/enzymatic_output_flux.ipynb)
 
 ### Biocircuit Design Applications
@@ -49,6 +49,10 @@ Ayush Pandey (2026). *Exponent Polytopes for Abstracting Chemical Reaction Netwo
   url = {https://www.biorxiv.org/content/10.64898/2026.11.13.766398v1}
 }
 ```
+
+## AI Use Statement
+
+The author used OpenAI Codex GPT 6.1 for extracting experimental data from the relevant papers, assistance with computational implementations, and to generate visualizations. All AI outputs were carefully reviewed, vetted, and edited by the author for accuracy and presentation. The author takes full responsibility for the content.
 
 ## Contact
 
